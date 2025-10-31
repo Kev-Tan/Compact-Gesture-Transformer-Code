@@ -436,7 +436,7 @@ def train_loop(args, train_loader, model, criterion, optimizer):
 
 
         # optionally log at each iter or each x iters
-        wandb.log({'train_loss': loss})
+        wandb.log({'train_loss_iter': loss})
         if idx % args.log_freq == 0:
             acc_iter = 100 * (predicted == labels).sum().item() / images.shape[0]
             print(f'{idx} / {len(train_loader)}, Loss: {loss}, Acc@1: {acc_iter}')
