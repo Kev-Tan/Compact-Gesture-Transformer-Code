@@ -144,6 +144,8 @@ def parse_args():
                         help='name for run in wandb')
     parser.add_argument('--project_name', type=str, default='RecognitionTutorial',
                         help='project folder in wandb')
+    parser.add_argument('--wandb_entity', type=str, default=None,
+                        help='user to log in wandb')
 
     # inference
     parser.add_argument('--images_path', type=str,
@@ -478,7 +480,10 @@ def set_results(args):
     os.makedirs(args.results_dir, exist_ok=True)
 
     # logger
-    wandb.init(config=args, project=args.project_name)
+    if args.wandb_entity:
+        wandb.init(config=args, project=args.project_name, entity=args.wandb_entity)
+    else:
+        wandb.init(config=args, project=args.project_name)
     wandb.run.name = args.run_name
 
     return 0
