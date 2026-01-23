@@ -4,7 +4,13 @@ einops
 # gradio==3.25.0
 # torchcam==0.3.2
 # opencv-python
-
+h5py==2.10.0
+imgaug @ git+https://github.com/aleju/imgaug.git@0101108d4fed06bc5056c4a03e2bcb0216dac326
+numpy==1.16.3
+opencv-python>=4.2.0.32
+pathlib==1.0.1
+tensorboardX==1.2
+tqdm==4.31.1
 
 
 
