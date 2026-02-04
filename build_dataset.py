@@ -8,7 +8,7 @@ import cv2
 import torch
 import torch.utils.data as data
 from PIL import Image
-from spatial_transforms import *
+# from spatial_transforms import *
 import os
 import math
 import functools
@@ -113,6 +113,8 @@ def get_video_names_and_annotations(data, subset):
             label = value['annotations']['label']
             video_names.append(key.split('_')[0])
             annotations.append(value['annotations'])
+            
+    # print(video_names, annotations)
 
     return video_names, annotations
 
@@ -334,7 +336,6 @@ class Briareo(Dataset):
         return clip.float(), label
     
 class CDEFG(Briareo):
-    print("CDEFG dataset was created")
     pass
 
 def get_set(args, split, transform=None):
@@ -362,11 +363,16 @@ def get_set(args, split, transform=None):
         return ds
     elif(args.dataset_name=='egogesture'):
         print("Retrieve Egogesture dataset")
-        ds = EgoGesture(root_path=args.dataset_root_path, annotation_path="",subset=split,sample_duration=args.num_frames)
-
+        if(split=="train"):
+            egoGestureSplit = "training"
+        ds = EgoGesture(root_path=args.dataset_root_path, annotation_path=args.annotation_path,subset=egoGestureSplit,sample_duration=args.num_frames)
+        return ds
 def main():
     
     # python .\build_dataset.py --dataset_root_path "D:\School\Lab\Compact-Gesture-Transformer-Code\Briareo_rgb" --dataset_name Briareo 
+    # Annotation path for egogesture: "/home/mislab/Charlene/annotation_EgoGesture/trainlistall.txt"
+    # Dataset path for egogesture: "/home/mislab/Charlene/frames/"
+    # JSON Egogesture: "/home/mislab/Charlene/annotation_EgoGesture/egogestureall.json"
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_root_path', type=str, required=True,
@@ -375,6 +381,7 @@ def main():
     parser.add_argument('--save_name_train', type=str, default='train_val')
     parser.add_argument('--save_name_test', type=str, default='test')
     parser.add_argument('--num_frames', type=int, default=40)
+    parser.add_argument('--annotation_path', type=str, default="/home/mislab/Charlene/annotation_EgoGesture/egogestureall.json")
     args = parser.parse_args()
     print(args.dataset_name)
     train_loader = get_set(args, 'train')
