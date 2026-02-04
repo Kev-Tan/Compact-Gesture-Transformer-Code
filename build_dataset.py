@@ -243,10 +243,17 @@ class EgoGesture(data.Dataset):
             self.spatial_transform.randomize_parameters()
             clip = [self.spatial_transform(img) for img in clip]
         
-        im_dim = clip[0].size()[-2:]
-        clip = torch.cat(clip, 0).view((self.sample_duration, -1) + im_dim).permute(1, 0, 2, 3)
         
-     
+        clip = self.loader(path, frame_indices, self.modality, self.sample_duration)
+
+        # PIL -> Tensor
+        clip = [
+            torch.from_numpy(np.array(img)).permute(2, 0, 1)
+            for img in clip
+        ]
+
+                
+            
         target = self.data[index]
         if self.target_transform is not None:
             target = self.target_transform(target)
