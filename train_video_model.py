@@ -1,24 +1,39 @@
-# Import everything that is necessary
+# ===== Standard Library =====
 import os
-from torch.utils.tensorboard import SummaryWriter
-os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
-import argparse
-from torch.utils.data.dataset import Dataset
 import math
-import torch
+import json
+import copy
+import glob
+import random
+import functools
+import argparse
 from pathlib import Path
+from urllib.request import urlopen
+
+# ===== Third-party =====
 import cv2
 import numpy as np
-import torch.nn as nn
-import timm
-from torch.utils.data import DataLoader
-from urllib.request import urlopen
+import matplotlib.pyplot as plt
 from PIL import Image
+from tqdm import tqdm
 import timm
 from timm import create_model
-from tqdm import tqdm
+
+# ===== PyTorch =====
+import torch
+import torch.nn as nn
+import torch.utils.data as data
+from torch.utils.data import Dataset, DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import MultiStepLR
-import matplotlib.pyplot as plt
+from torchvision import get_image_backend
+
+# ===== Project / Local =====
+import build_dataset
+
+# ===== Env =====
+os.environ["PYTORCH_ALLOC_CONF"] = "expandable_segments:True"
+
 
 
 hyperparams = {
@@ -60,95 +75,6 @@ hyperparams = {
 # Decide if we use timm_backbone or not
 timm_backbone = True
 model_name = "resnet18.a1_in1k"
-
-class Briareo(Dataset):
-    """Briareo Dataset class"""
-    def __init__(self, configer, path, split="train", data_type='rgb', transforms=None, n_frames=30, optical_flow=False):
-        """Constructor method for Briareo Dataset class
-
-        Args:
-            configer (Configer): Configer object for current procedure phase (train, test, val)
-            split (str, optional): Current procedure phase (train, test, val)
-            data_type (str, optional): Input data type (depth, rgb, normals, ir)
-            transform (Object, optional): Data augmentation transformation for every data
-            n_frames (int, optional): Number of frames selected for every input clip
-            optical_flow (bool, optional): Flag to choose if calculate optical flow or not
-
-        """
-        super().__init__()
-        self.dataset_path = Path(path)
-        self.split = split
-        self.data_type = data_type
-        self.optical_flow = optical_flow
-
-        self.transforms = transforms
-        self.n_frames = n_frames + 1
-
-        print("Loading Briareo {} dataset...".format(split.upper()), end=" ")
-        data = np.load(self.dataset_path / "splits" / (self.split if self.split != "val" else "train") /
-                                    "{}_{}.npz".format(data_type, self.split), allow_pickle=True)['arr_0']
-
-        # Prepare clip for the selected number of frames n_frame
-        fixed_data = list()
-        for i, record in enumerate(data):
-            paths = record['data']
-
-            center_of_list = math.floor(len(paths) / 2)
-            crop_limit = math.floor(self.n_frames / 2)
-
-            start = center_of_list - crop_limit
-            end = center_of_list + crop_limit
-            paths_cropped = paths[start: end + 1 if self.n_frames % 2 == 1 else end]
-            if self.data_type == 'leapmotion':
-                valid = np.array(record['valid'][start: end + 1 if self.n_frames % 2 == 1 else end])
-                if valid.sum() == len(valid):
-                    data[i]['data'] = paths_cropped
-                    fixed_data.append(data[i])
-            else:
-                data[i]['data'] = paths_cropped
-                fixed_data.append(data[i])
-            # print("Length of cropped data", len(data[i]['data']))
-        self.data = np.array(fixed_data)
-        print("done.")
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        paths = self.data[idx]['data']
-        label = self.data[idx]['label']
-
-        clip = list()
-        for p in paths:
-            img = cv2.imread(str(self.dataset_path / p), cv2.IMREAD_COLOR)
-            img = cv2.resize(img, (224, 224))
-            if self.data_type != "rgb":
-                img = np.expand_dims(img, axis=2)
-            clip.append(img)
-
-        clip = np.array(clip).transpose(1, 2, 3, 0)
-
-
-        if self.transforms is not None:
-            aug_det = self.transforms.to_deterministic()
-            clip = np.array([aug_det.augment_image(clip[..., i]) for i in range(clip.shape[-1])]).transpose(1, 2, 3, 0)
-
-        clip = torch.from_numpy(clip.reshape(clip.shape[0], clip.shape[1], -1).transpose(2, 0, 1))
-        label = torch.LongTensor(np.asarray([label]))
-        return clip.float(), label
-
-
-def build_dataloaders():
-    dataset_path = "D:\School\Lab\Compact-Gesture-Transformer-Code\Briareo_rgb"
-    train_loader = DataLoader(Briareo(configer=None, path=dataset_path, data_type="rgb", split="train", n_frames=40), batch_size=8,  shuffle=True, num_workers=4)
-    test_loader = DataLoader(Briareo(configer=None, path=dataset_path, data_type="rgb", split="test", n_frames=40), batch_size=8,  shuffle=False, num_workers=0)
-    val_loader = DataLoader(Briareo(configer=None, path=dataset_path, data_type="rgb", split="val", n_frames=40), batch_size=1,  shuffle=False, num_workers=0)
-    return train_loader, test_loader, val_loader
-
-
-import torch
-import torch.nn as nn
-import numpy as np
 
 def position_embedding(input, d_model):
     input = input.view(-1, 1)
@@ -337,7 +263,6 @@ def build_model(backbone="timm", in_planes = 3, out_planes=12):
     model = _GestureTransformer(backbone = "timm", in_planes = in_planes, out_planes=out_planes)
     return model
 
-# Remove args and replace with device since .ipynb files do not work with command line arguments
 def train_loop(device, train_loader, model, criterion, optimizer):
     # certain modules behave differently during train/test (dropout)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -404,18 +329,26 @@ def test_loop(device, test_loader, model):
 
 
 def main():
-    writer = SummaryWriter()
-    print(torch.__version__)
-    print(torch.cuda.is_available())
-    train_loader, test_loader, val_loader = build_dataloaders()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_root_path', type=str, required=True,
+                        help='path to dataset root')
+    parser.add_argument('--dataset_name', type=str, required=True, help='dataset name')
+    parser.add_argument('--save_name_train', type=str, default='train_val')
+    parser.add_argument('--save_name_test', type=str, default='test')
+    parser.add_argument('--num_frames', type=int, default=40)
+    parser.add_argument('--annotation_path', type=str, default="/home/mislab/Charlene/annotation_EgoGesture/egogestureall.json")
+    args = parser.parse_args()
+    
+    train_loader = DataLoader(build_dataset.get_set(args, 'train'))
+    test_loader = DataLoader(build_dataset.get_set(args, 'test'))
+    val_loader = DataLoader(build_dataset.get_set(args, 'val'))
     
     model = build_model()
-    device = hyperparams.get("device")
-    model.to(device)
-    
-    criterion = nn.CrossEntropyLoss().to(device)
+    criterion = nn.CrossEntropyLoss().to(hyperparams.get("device"))
     optimizer = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=0.0001,
-                                            weight_decay=0.0001)
+                                          weight_decay=0.0001)
+    
+    device = hyperparams.get("device")
 
     for epoch in range(30):
         print(epoch+1)
@@ -429,10 +362,13 @@ def main():
         writer.add_scalar("Acc/val", val_acc, epoch)
         
         print(f"Epoch {epoch+1}: Loss={loss}, Train_Acc={train_acc}, Test_Acc={test_acc}, Val_Acc={val_acc}")
-    
+
     writer.close()
-            
     
+    # sample = next(iter(train_loader))
+    # print(sample[0])
+
+
 
 if __name__ == '__main__':
     main()
