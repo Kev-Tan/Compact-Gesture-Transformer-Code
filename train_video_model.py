@@ -28,6 +28,8 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.optim.lr_scheduler import MultiStepLR
 from torchvision import get_image_backend
 
+from dataset_generation.build_dataset import DatasetImgTarget
+
 # ===== Project / Local =====
 import build_dataset
 
@@ -247,6 +249,7 @@ class _GestureTransformer(nn.Module):
     def forward(self, x):
         shape = x.shape
 
+        print("===========", x.shape)
         x = x.view(-1, self.in_planes, x.shape[-2], x.shape[-1])
 
         x = self.backbone(x)
@@ -339,9 +342,14 @@ def main():
     parser.add_argument('--annotation_path', type=str, default="/home/mislab/Charlene/annotation_EgoGesture/egogestureall.json")
     args = parser.parse_args()
     
-    train_loader = DataLoader(build_dataset.get_set(args, 'train'))
-    test_loader = DataLoader(build_dataset.get_set(args, 'test'))
-    val_loader = DataLoader(build_dataset.get_set(args, 'val'))
+    # train_loader = DataLoader(build_dataset.get_set(args, 'train'))
+    # test_loader = DataLoader(build_dataset.get_set(args, 'test'))
+    # val_loader = DataLoader(build_dataset.get_set(args, 'val'))
+    
+    train_loader = DataLoader(DatasetImgTarget(root = args.dataset_root_path, split='train'))
+    test_loader = DataLoader(DatasetImgTarget(root = args.dataset_root_path, split='test'))
+    val_loader = DataLoader(DatasetImgTarget(root = args.dataset_root_path, split='val'))
+    print("work")
     
     model = build_model()
     criterion = nn.CrossEntropyLoss().to(hyperparams.get("device"))
@@ -365,8 +373,8 @@ def main():
 
     writer.close()
     
-    # sample = next(iter(train_loader))
-    # print(sample[0])
+    sample = next(iter(train_loader))
+    print(sample[0])
 
 
 

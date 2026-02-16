@@ -552,7 +552,7 @@ class Briareo(Dataset):
         self.n_frames = n_frames + 1
 
         print("Loading Briareo {} dataset...".format(split.upper()), end=" ")
-        data = np.load(self.dataset_path / "splits" / (self.split if self.split != "val" else "train") /
+        data = np.load(self.dataset_path /"rgb"/ "splits" / (self.split if self.split != "val" else "train") /
                                     "{}_{}.npz".format(data_type, self.split), allow_pickle=True)['arr_0']
 
         # Prepare clip for the selected number of frames n_frame
@@ -597,6 +597,7 @@ class Briareo(Dataset):
             clip.append(img)
 
         clip = np.array(clip).transpose(1, 2, 3, 0)
+        print("_____", clip.shape)
 
 
         if self.transforms is not None:
@@ -604,6 +605,7 @@ class Briareo(Dataset):
             clip = np.array([aug_det.augment_image(clip[..., i]) for i in range(clip.shape[-1])]).transpose(1, 2, 3, 0)
 
         clip = torch.from_numpy(clip.reshape(clip.shape[0], clip.shape[1], -1).transpose(2, 0, 1))
+        print("*****", clip.shape)
         label = torch.LongTensor(np.asarray([label]))
         return clip.float(), label
     
