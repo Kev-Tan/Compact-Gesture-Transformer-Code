@@ -27,6 +27,7 @@ import pandas as pd
 import ast
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
+from PIL import Image
 
 
 
@@ -82,24 +83,36 @@ class DatasetImgTarget(data.Dataset):
         for p in paths:
             # p[0] because apparently p is a tuple
             path_frame = os.path.join(self.root,  p[0])
-            img = cv2.imread(path_frame, cv2.IMREAD_COLOR)
-            # cv2.imshow("image", img)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
-            img = cv2.resize(img, (224, 224))
-            clip.append(img)
+            # img = cv2.imread(path_frame, cv2.IMREAD_COLOR)
+            # # cv2.imshow("image", img)
+            # # cv2.waitKey(0)
+            # # cv2.destroyAllWindows()
+            # rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            # rgb_img = cv2.resize(rgb_img, (224, 224))
+            # clip.append(rgb_img)
+            
+            # H, W, C
+            img = Image.open(path_frame)
+            rgb_img = img.convert("RGB")
+            clip.append(rgb_img)
+            
+        # (F, H, W, C) to (F, C, H, W)
+        clip = np.array(clip).transpose(0, 3, 1, 2)
         
-        clip = np.array(clip).transpose(1, 2, 3, 0)
+        #clip now becomes # F, H, W, C
+        # clip = np.array(clip)
+        
         # print("_____", clip.shape)
         
-        if self.transforms is not None:
-            aug_det = self.transforms.to_deterministic()
-            clip = np.array([aug_det.augment_image(clip[..., i]) for i in range(clip.shape[-1])]).transpose(1, 2, 3, 0)
+        # if self.transforms is not None:
+        #     aug_det = self.transforms.to_deterministic()
+        #     clip = np.array([aug_det.augment_image(clip[..., i]) for i in range(clip.shape[-1])]).transpose(1, 2, 3, 0)
 
     
         # Clip looked like this (224, 224, 3, 41) 
         # the -1 at the end automatically computes the last dimension (infer?)
-        clip = torch.from_numpy(clip.reshape(clip.shape[0], clip.shape[1], -1).transpose(2, 0, 1))
+        # clip = torch.from_numpy(clip.reshape(clip.shape[0], clip.shape[1], -1).transpose(2, 0, 1))
+        clip = torch.from_numpy(clip)
         # print("*****", clip.shape)
         label = torch.LongTensor(np.asarray([label]))
         
@@ -108,19 +121,21 @@ class DatasetImgTarget(data.Dataset):
 def vis_dataset(args):
     result_dir = r"dataset_generation\\visualized_images"
     train_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='train'), batch_size=1)
-    test_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='test'))
-    val_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='val'))
+    test_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='test'), batch_size=1)
+    val_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='val'), batch_size=1)
     for split, loader in zip(['train', 'val', 'test'], [train_set, val_set, test_set]):
         for idx, (images, _) in enumerate(loader):
             print("Shape of images is ", images.shape)
-            batch_size, channel_times_frame, height, width = images.shape
+            # (B, F, C, H, W)
+            batch_size, frames, channels, height, width = images.shape
             channels = 3
-            frame = channel_times_frame // channels
+            # (batch, frames, channel, height, width)
+            # images = images.permute(0, 1, 4, 2, 3)
             
             # Convention is B,F,C,H,W
-            images = images.view(batch_size, frame, channels, height, width)
+            images = images.view(-1, channels, height, width)
             
-            images = images.view(batch_size * frame, channels, height, width )
+            # images = images.view(batch_size * frame, channels, height, width )
             print("Revised image shape is ", images.shape)
             
             # Why add this line? Why must it be divided by 255?
