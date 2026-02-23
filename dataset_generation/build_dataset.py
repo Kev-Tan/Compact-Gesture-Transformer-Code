@@ -35,9 +35,10 @@ from PIL import Image
 # Relative import
 from .generate_csv import generate_csv
 from .build_transform import standard_transform
+from .temporal_transform import sampling
 
 class DatasetImgTarget(data.Dataset):
-    def __init__(self, root, split, transforms = None , n_frames = 40):
+    def __init__(self, root, split, transforms = None , n_frames = 20):
         # Split is train, test, val
         
         self.transforms = transforms
@@ -54,20 +55,22 @@ class DatasetImgTarget(data.Dataset):
         # Should sampling be done within this class or not?
         # For example, what is another dataset have their own way of sampling?
         
+        # self.data = sampling(self.data, 30)
+        
         # Stores the path to images selected after sampling
-        fixed_data = []
-        for i, record in enumerate(self.data):
-            # used ast because the array being passed record is in the form of a string
-            # For more info, try printing type(record) or print len(record)
-            record = ast.literal_eval(record)
-            center_of_list = math.floor(len(record)/2)
-            crop_limit = math.floor(self.n_frames / 2)
-            start = center_of_list - crop_limit
-            end = center_of_list + crop_limit 
-            # Add one more extra frame if n_frames is odd  
-            paths_cropped = record[start: end + 1 if self.n_frames % 2 == 1 else end + 1]
-            # Adding arrays of cropped clips for every video_sample
-            fixed_data.append(paths_cropped)
+        fixed_data = sampling(self.data, n_frames)
+        # for i, record in enumerate(self.data):
+        #     # used ast because the array being passed record is in the form of a string
+        #     # For more info, try printing type(record) or print len(record)
+        #     record = ast.literal_eval(record)
+        #     center_of_list = math.floor(len(record)/2)
+        #     crop_limit = math.floor(self.n_frames / 2)
+        #     start = center_of_list - crop_limit
+        #     end = center_of_list + crop_limit 
+        #     # Add one more extra frame if n_frames is odd  
+        #     paths_cropped = record[start: end + 1 if self.n_frames % 2 == 1 else end + 1]
+        #     # Adding arrays of cropped clips for every video_sample
+        #     fixed_data.append(paths_cropped)
         
         self.data = fixed_data
     
