@@ -1,4 +1,4 @@
-from transformer import _GestureTransformer
+from gesture_transformer import _GestureTransformer
 import torch
 import torch.nn as nn
 from configs import TransformerConfig
@@ -9,12 +9,9 @@ def build_model(args):
         model = Transformer(args)
         
 def main():
-    # What are the args i should put here?
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_name', type=str, required=True,
                         help='path to dataset root')
-    parser.add_argument('--backbone', type=str, required=True,
-                        help='backbone')
     args = parser.parse_args()
     build_model(args)
     return

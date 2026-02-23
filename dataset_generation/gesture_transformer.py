@@ -26,9 +26,12 @@ class _GestureTransformer(nn.Module):
             # self.backbone = config.backbone(config.pretrained, config.in_planes, 
             #                                dropout=config.dropout_backbone)
 
+
         self.self_attention = EncoderSelfAttention(
             d_model = 512, 
-            config = config,
+            d_k = 64,
+            d_v = 64,
+            n_head = config.num_heads,
             **kwargs
         )
 

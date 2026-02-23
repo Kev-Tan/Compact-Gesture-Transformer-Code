@@ -14,8 +14,8 @@ class TransformerConfig():
                  attention_dropout: float = 0.1,
                  ):
         
-        self.model_name = args.model_name
-        self.backbone = args.backbone
+        self.model_name = model_name
+        self.backbone = backbone
         self.in_planes = in_planes
         self.out_planes = out_planes
         self.pretrained = pretrained
