@@ -31,8 +31,10 @@ from PIL import Image
 
 
 
+
 # Relative import
 from .generate_csv import generate_csv
+from .build_transform import standard_transform
 
 class DatasetImgTarget(data.Dataset):
     def __init__(self, root, split, transforms = None , n_frames = 40):
@@ -78,6 +80,7 @@ class DatasetImgTarget(data.Dataset):
         label = self.targets[index]
         
         clip = []
+        seed = np.random.randint(2147483647)  # Generate one seed for the entire clip
         
         # Process each frame in a gesture clip
         for p in paths:
@@ -91,27 +94,23 @@ class DatasetImgTarget(data.Dataset):
             # rgb_img = cv2.resize(rgb_img, (224, 224))
             # clip.append(rgb_img)
             
+
+            # Set seed for PyTorch random number generator
+            torch.manual_seed(seed)
+
+            
             # H, W, C
             img = Image.open(path_frame)
             rgb_img = img.convert("RGB")
+            rgb_img = self.transforms(rgb_img)
             clip.append(rgb_img)
-            
-        # (F, H, W, C) to (F, C, H, W)
-        clip = np.array(clip).transpose(0, 3, 1, 2)
         
-        #clip now becomes # F, H, W, C
-        # clip = np.array(clip)
-        
-        # print("_____", clip.shape)
-        
-        # if self.transforms is not None:
-        #     aug_det = self.transforms.to_deterministic()
-        #     clip = np.array([aug_det.augment_image(clip[..., i]) for i in range(clip.shape[-1])]).transpose(1, 2, 3, 0)
+        # Passing it to transformation function makes it (c, h, w) by default)
+        # If we did not pass it through the transformation function, we have to transpose it since it's (h, w, c) if I'm not mistaken
+        clip = np.array(clip)
 
-    
-        # Clip looked like this (224, 224, 3, 41) 
-        # the -1 at the end automatically computes the last dimension (infer?)
-        # clip = torch.from_numpy(clip.reshape(clip.shape[0], clip.shape[1], -1).transpose(2, 0, 1))
+           
+
         clip = torch.from_numpy(clip)
         # print("*****", clip.shape)
         label = torch.LongTensor(np.asarray([label]))
@@ -119,9 +118,11 @@ class DatasetImgTarget(data.Dataset):
         return clip.float(), label
 
 def vis_dataset(args):
-    result_dir = r"dataset_generation\\visualized_images"
-    train_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='train'), batch_size=1)
-    test_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='test'), batch_size=1)
+    transform_function = standard_transform(args, True)
+    # print("Testing", transform_function)
+    result_dir = r"dataset_generation\\tester_images"
+    train_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='train', transforms=transform_function), batch_size=1)
+    test_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='test', transforms=transform_function), batch_size=1)
     val_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='val'), batch_size=1)
     for split, loader in zip(['train', 'val', 'test'], [train_set, val_set, test_set]):
         for idx, (images, _) in enumerate(loader):
@@ -139,7 +140,8 @@ def vis_dataset(args):
             print("Revised image shape is ", images.shape)
             
             # Why add this line? Why must it be divided by 255?
-            images = images.float() / 255.0
+            # Add only to normalize when not passing it through a transformation function
+            # images = images.float() / 255.0
             
             fp = os.path.join(result_dir, split, f'{idx}.png')
             save_image(images, fp, nrow=int(math.sqrt(images.shape[0])))
@@ -148,6 +150,12 @@ def main():
     parser.add_argument('--dataset_root_path', type=str, required = True, help="path to dataset root")
     parser.add_argument('--dataset_name', type=str, required = True, help = "name of the dataset")
     parser.add_argument('--visualize', action="store_true")
+    parser.add_argument('--random_erasing', action="store_true", help = "trigger random erasing operations")
+    parser.add_argument('--random_horizontal_flip', action="store_true")
+    parser.add_argument('--random_cropping', action="store_true")
+    parser.add_argument('--restricted_rotation', action="store_true")
+    parser.add_argument('--shear', action="store_true")
+    parser.add_argument('--translate', action="store_true")
     args = parser.parse_args()
     
 
@@ -161,15 +169,7 @@ def main():
         else:
             print("not visualize")
     
-        
-        # train_set = DatasetImgTarget(root=args.dataset_root_path, split='train')
-        # print(len(train_set))
-        # for index, data in enumerate(DataLoader(train_set)):
-        #     print(index)
-        #     print(data)
-        
-    # vis_dataset(args)
-        
+
 
 if __name__ == '__main__':
     main()
