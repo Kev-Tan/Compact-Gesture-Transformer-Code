@@ -12,15 +12,15 @@ class _GestureTransformer(nn.Module):
         self.in_planes = config.in_planes
         
         # Build backbone based on config
-        if config.backbone == "timm":
+        # if config.backbone == "timm":
             # hyperparams = {
             #     "pretrained": config.pretrained,
             #     "dropout2d": config.dropout2d,
             #     "drop_path": config.drop_path,
             #     "input_size": config.input_size,
             # }
-            self.backbone = build_timm_backbone(config)
-            print("Finish building timm backbone")
+        self.backbone = build_timm_backbone(config)
+        print("Finish building timm backbone")
         # else:
             # For other backbone types (resnet, vgg, etc.)
             # self.backbone = config.backbone(config.pretrained, config.in_planes, 
@@ -32,6 +32,9 @@ class _GestureTransformer(nn.Module):
             d_k = 64,
             d_v = 64,
             n_head = config.num_heads,
+            n_module = config.n_module,
+            dff = config.ff_size,
+            dropout_transformer = config.attention_dropout,
             **kwargs
         )
 

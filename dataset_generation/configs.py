@@ -1,17 +1,19 @@
 class TransformerConfig():
     def __init__(self, args,
-                 model_name: str = "GestureTransformer",  # Architecture name
-                 backbone: str = "resnet50",               # timm model name
+                 model_name: str = "GestureTransformer",
+                 backbone: str = "resnet18",          # matches JSON
                  in_planes: int = 3,
-                 out_planes: int = 10,
+                 out_planes: int = 12,              # n_classes
                  pretrained: bool = True,
                  dropout_backbone: float = 0.1,
-                 dropout2d: float = 0.1,
+                 dropout2d: float = 0.1,            # from JSON
                  drop_path: float = 0.1,
                  input_size: int = 224,
-                 num_heads: int = 8,
+                 num_heads: int = 8,                # n_head
                  hidden_dim: int = 512,
-                 attention_dropout: float = 0.1,
+                 ff_size: int = 1024,               # feedforward size
+                 attention_dropout: float = 0.5,    # dropout1d
+                 n_module: int = 6                  # transformer layers
                  ):
         
         self.model_name = model_name
@@ -25,8 +27,6 @@ class TransformerConfig():
         self.input_size = input_size
         self.num_heads = num_heads
         self.hidden_dim = hidden_dim
+        self.ff_size = ff_size
         self.attention_dropout = attention_dropout
-
-# Usage:
-# config = TransformerConfig()
-# config = TransformerConfig(model_name="deit_base_patch16_224", out_planes=20)
+        self.n_module = n_module
