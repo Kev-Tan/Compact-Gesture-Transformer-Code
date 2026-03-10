@@ -1,7 +1,8 @@
 import torch.nn as nn
 import timm
-from timm_backbone import build_timm_backbone
-from attention import EncoderSelfAttention
+from .timm_backbone import build_timm_backbone
+from .attention import EncoderSelfAttention
+
 
 class _GestureTransformer(nn.Module):
     """Multi Modal model for gesture recognition on 3 channel"""

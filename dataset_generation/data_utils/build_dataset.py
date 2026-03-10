@@ -28,13 +28,18 @@ import ast
 from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 from PIL import Image
+import einops
+from pytorchvideo.transforms import UniformTemporalSubsample
+from torchvision.transforms import Compose, Lambda
+from torchvision.transforms._transforms_video import NormalizeVideo
+from pytorchvideo.transforms import UniformTemporalSubsample
 
 
 
 
 # Relative import
 from .generate_csv import generate_csv
-from .build_transform import standard_transform
+from .pytorch_video_transform import standard_transform
 from .temporal_transform import sampling
 
 class DatasetImgTarget(data.Dataset):
@@ -52,25 +57,15 @@ class DatasetImgTarget(data.Dataset):
         self.targets = self.df['class_id'].to_numpy()
         self.data = self.df['dir'].to_numpy()
         
-        # Should sampling be done within this class or not?
-        # For example, what is another dataset have their own way of sampling?
         
         # self.data = sampling(self.data, 30)
         
         # Stores the path to images selected after sampling
-        fixed_data = sampling(self.data, n_frames)
-        # for i, record in enumerate(self.data):
-        #     # used ast because the array being passed record is in the form of a string
-        #     # For more info, try printing type(record) or print len(record)
-        #     record = ast.literal_eval(record)
-        #     center_of_list = math.floor(len(record)/2)
-        #     crop_limit = math.floor(self.n_frames / 2)
-        #     start = center_of_list - crop_limit
-        #     end = center_of_list + crop_limit 
-        #     # Add one more extra frame if n_frames is odd  
-        #     paths_cropped = record[start: end + 1 if self.n_frames % 2 == 1 else end + 1]
-        #     # Adding arrays of cropped clips for every video_sample
-        #     fixed_data.append(paths_cropped)
+        # fixed_data = sampling(self.data, n_frames)
+        fixed_data = []
+        for i, record in enumerate(self.data):
+            record = ast.literal_eval(record)
+            fixed_data.append(record)
         
         self.data = fixed_data
     
@@ -87,57 +82,49 @@ class DatasetImgTarget(data.Dataset):
         
         # Process each frame in a gesture clip
         for p in paths:
-            # p[0] because apparently p is a tuple
             path_frame = os.path.join(self.root,  p[0])
-            # img = cv2.imread(path_frame, cv2.IMREAD_COLOR)
-            # # cv2.imshow("image", img)
-            # # cv2.waitKey(0)
-            # # cv2.destroyAllWindows()
-            # rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-            # rgb_img = cv2.resize(rgb_img, (224, 224))
-            # clip.append(rgb_img)
-            
-
-            # Set seed for PyTorch random number generator
             torch.manual_seed(seed)
 
             
             # H, W, C
             img = Image.open(path_frame)
             rgb_img = img.convert("RGB")
-            rgb_img = self.transforms(rgb_img)
             clip.append(rgb_img)
         
         # Passing it to transformation function makes it (c, h, w) by default)
         # If we did not pass it through the transformation function, we have to transpose it since it's (h, w, c) if I'm not mistaken
         clip = np.array(clip)
-
-           
+        clip = einops.rearrange(clip,"f h w c -> c f h w")
+        print("SHAPE CLIP", clip.shape)
 
         clip = torch.from_numpy(clip)
+        clip = self.transforms(clip)
         # print("*****", clip.shape)
         label = torch.LongTensor(np.asarray([label]))
         
         return clip.float(), label
 
 def vis_dataset(args):
-    transform_function = standard_transform(args, True)
+
     # print("Testing", transform_function)
+    transforms = standard_transform(args)
     result_dir = r"dataset_generation\\tester_images"
-    train_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='train', transforms=transform_function), batch_size=1)
-    test_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='test', transforms=transform_function), batch_size=1)
+    train_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='train', transforms=transforms), batch_size=1)
+    test_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='test', transforms=transforms), batch_size=1)
     val_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='val'), batch_size=1)
     for split, loader in zip(['train', 'val', 'test'], [train_set, val_set, test_set]):
         for idx, (images, _) in enumerate(loader):
             print("Shape of images is ", images.shape)
             # (B, F, C, H, W)
-            batch_size, frames, channels, height, width = images.shape
+            batch_size, channels, frames, height, width = images.shape
+            # images = einops.rearrange(images, "b c f h w -> b c t h w")
             channels = 3
             # (batch, frames, channel, height, width)
             # images = images.permute(0, 1, 4, 2, 3)
             
             # Convention is B,F,C,H,W
-            images = images.view(-1, channels, height, width)
+            # images = images.view(-1, channels, height, width)
+            images = einops.rearrange(images,"b c f h w -> (b f) c h w")
             
             # images = images.view(batch_size * frame, channels, height, width )
             print("Revised image shape is ", images.shape)
@@ -146,6 +133,8 @@ def vis_dataset(args):
             # Add only to normalize when not passing it through a transformation function
             # images = images.float() / 255.0
             
+            
+            
             fp = os.path.join(result_dir, split, f'{idx}.png')
             save_image(images, fp, nrow=int(math.sqrt(images.shape[0])))
 def main():
@@ -153,12 +142,17 @@ def main():
     parser.add_argument('--dataset_root_path', type=str, required = True, help="path to dataset root")
     parser.add_argument('--dataset_name', type=str, required = True, help = "name of the dataset")
     parser.add_argument('--visualize', action="store_true")
-    parser.add_argument('--random_erasing', action="store_true", help = "trigger random erasing operations")
-    parser.add_argument('--random_horizontal_flip', action="store_true")
-    parser.add_argument('--random_cropping', action="store_true")
-    parser.add_argument('--restricted_rotation', action="store_true")
-    parser.add_argument('--shear', action="store_true")
-    parser.add_argument('--translate', action="store_true")
+    # parser.add_argument('--random_erasing', action="store_true", help = "trigger random erasing operations")
+    # parser.add_argument('--random_horizontal_flip', action="store_true")
+    # parser.add_argument('--random_cropping', action="store_true")
+    # parser.add_argument('--restricted_rotation', action="store_true")
+    # parser.add_argument('--shear', action="store_true")
+    # parser.add_argument('--translate', action="store_true")
+    parser.add_argument('--uniform_temporal_subsample',type=int, default=None, metavar='N',help='Apply uniform temporal subsampling with N frames' )
+    # parser.add_argument('--normalize', type= bool, default=True, help="Determine is normalization will be applied")
+    parser.add_argument('--random_crop', type=int, default=None, metavar='N',help='Apply random crop to a given size' )
+
+    
     args = parser.parse_args()
     
 

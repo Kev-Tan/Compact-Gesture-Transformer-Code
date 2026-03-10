@@ -74,8 +74,9 @@ def main():
 
     image = Image.open(img_addr).convert('RGB')
     transformed_image = transform(image)
-    
+    transformed_image.show()
     save_image(transformed_image, r'output_image.png')
+    
 
 
 if __name__ == "__main__":
