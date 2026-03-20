@@ -31,6 +31,12 @@ class Briareo_csv(Dataset):
             idx = idx.tolist()
         return self.image_path[idx]['label'], self.image_path[idx]['data']
     
+    
+class Egogesture_csv(Dataset):
+        def __init__(self, root, split, transform = None):
+            return     
+
+    
 def generate_csv(root, split):
     dataset_obj = Briareo_csv(root = root, split = split)
     dic_target_img_dir = {}

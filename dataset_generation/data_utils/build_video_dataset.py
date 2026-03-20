@@ -42,11 +42,11 @@ from .generate_csv import generate_csv
 from .pytorch_video_transform import standard_transform
 from .temporal_transform import sampling
 
-class DatasetImgTarget(data.Dataset):
-    def __init__(self, root, split, transforms = None , n_frames = 20):
+class DatasetVideoTarget(data.Dataset):
+    def __init__(self, root, split, transform = None , n_frames = 20):
         # Split is train, test, val
         
-        self.transforms = transforms
+        self.transform = transform
         self.root = root
         self.split = split
         self.images_folder = root
@@ -56,6 +56,10 @@ class DatasetImgTarget(data.Dataset):
         self.df = pd.read_csv(path_csv, sep=',')
         self.targets = self.df['class_id'].to_numpy()
         self.data = self.df['dir'].to_numpy()
+        self.num_classes = len(set(self.targets))
+        # self.num_classes = max(self.targets) + 1
+        # print("NUM CLASSES IS", self.num_classes)
+        # print(len(set(self.targets)))
         
         
         # self.data = sampling(self.data, 30)
@@ -94,40 +98,42 @@ class DatasetImgTarget(data.Dataset):
         # Passing it to transformation function makes it (c, h, w) by default)
         # If we did not pass it through the transformation function, we have to transpose it since it's (h, w, c) if I'm not mistaken
         clip = np.array(clip)
+        # print("Shape of clip before is", clip.shape)
+        # clip = einops.rearrange(clip,"f h w c -> f c h w")
         clip = einops.rearrange(clip,"f h w c -> c f h w")
-        print("SHAPE CLIP", clip.shape)
-
         clip = torch.from_numpy(clip)
-        clip = self.transforms(clip)
-        # print("*****", clip.shape)
+        # print("Shape of clip before is before transform", clip.shape)
+        clip = self.transform(clip)
+        clip = einops.rearrange(clip,"f c h w -> c f h w")
+        # print("Shape of clip is ", clip.shape)
+
         label = torch.LongTensor(np.asarray([label]))
-        
+        label = label.squeeze(-1)
         return clip.float(), label
 
 def vis_dataset(args):
 
     # print("Testing", transform_function)
-    transforms = standard_transform(args)
+    transform = standard_transform(args)
     result_dir = r"dataset_generation\\tester_images"
-    train_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='train', transforms=transforms), batch_size=1)
-    test_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='test', transforms=transforms), batch_size=1)
-    val_set = DataLoader(DatasetImgTarget(root=args.dataset_root_path, split='val'), batch_size=1)
+    train_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
+    test_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
+    val_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='val'), batch_size=1)
     for split, loader in zip(['train', 'val', 'test'], [train_set, val_set, test_set]):
         for idx, (images, _) in enumerate(loader):
-            print("Shape of images is ", images.shape)
+            # print("Shape of images is ", images.shape)
             # (B, F, C, H, W)
-            batch_size, channels, frames, height, width = images.shape
+            batch_size, frames, channels, height, width = images.shape
             # images = einops.rearrange(images, "b c f h w -> b c t h w")
-            channels = 3
             # (batch, frames, channel, height, width)
             # images = images.permute(0, 1, 4, 2, 3)
             
             # Convention is B,F,C,H,W
             # images = images.view(-1, channels, height, width)
-            images = einops.rearrange(images,"b c f h w -> (b f) c h w")
+            images = einops.rearrange(images,"b f c h w -> (b f) c h w")
             
             # images = images.view(batch_size * frame, channels, height, width )
-            print("Revised image shape is ", images.shape)
+            # print("Revised image shape is ", images.shape)
             
             # Why add this line? Why must it be divided by 255?
             # Add only to normalize when not passing it through a transformation function
@@ -150,7 +156,18 @@ def main():
     # parser.add_argument('--translate', action="store_true")
     parser.add_argument('--uniform_temporal_subsample',type=int, default=None, metavar='N',help='Apply uniform temporal subsampling with N frames' )
     # parser.add_argument('--normalize', type= bool, default=True, help="Determine is normalization will be applied")
-    parser.add_argument('--random_crop', type=int, default=None, metavar='N',help='Apply random crop to a given size' )
+    # parser.add_argument('--random_crop', type=int, default=None, metavar='N',help='Apply random crop to a given size' )
+    parser.add_argument('--color_jitter', action="store_true")
+    parser.add_argument('--random_rotation', action="store_true")
+    parser.add_argument('--random_gaussian_blur', action="store_true")
+    parser.add_argument('--random_motion_blur', action="store_true")
+    parser.add_argument('--random_affine', action="store_true")
+    parser.add_argument('--random_gaussian_noise', action="store_true")
+    parser.add_argument('--random_resized_cropping', action="store_true")
+    parser.add_argument('--elastic_transformation', action="store_true")
+    parser.add_argument('--random_perspective', action="store_true")
+    parser.add_argument('--random_erasing', action="store_true")
+    
 
     
     args = parser.parse_args()

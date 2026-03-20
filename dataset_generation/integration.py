@@ -6,7 +6,7 @@ import os
 
 from model_utils.configs import TransformerConfig
 from model_utils.build_model import build_model
-from data_utils.build_dataset import DatasetImgTarget
+from dataset_generation.data_utils.build_video_dataset import DatasetVideoTarget
 from data_utils.build_transform import standard_transform
 from data_utils.generate_csv import generate_csv
 

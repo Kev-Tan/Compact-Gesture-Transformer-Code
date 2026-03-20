@@ -21,8 +21,13 @@ import numpy as np
 import pandas as pd
 from PIL import Image
 from PIL import ImageFile
-
+from einops import rearrange
 from mix import get_mix, mixup_criterion
+
+from dataset_generation.data_utils.build_video_dataset import DatasetVideoTarget
+from dataset_generation.data_utils.pytorch_video_transform import standard_transform
+from einops import reduce
+
 
 
 ImageFile.LOAD_TRUNCATED_IMAGES = True
@@ -68,6 +73,8 @@ def parse_args():
                         help='dataset name')
     parser.add_argument('--dataset_root_path', type=str, default='data',
                         help='the root directory for where the data/feature/label files are')
+    parser.add_argument('--video', action="store_true")
+    parser.add_argument('--uniform_temporal_subsample',type=int, default=None, metavar='N',help='Apply uniform temporal subsampling with N frames' )
 
     # folders with images (can be same: those where it's all stored in 'data')
     parser.add_argument('--folder_train', type=str, default='data',
@@ -126,6 +133,18 @@ def parse_args():
                         help='use trivialaugmentwide')
     parser.add_argument('--re', default=0.0, type=float,
                         help='Random Erasing probability (def: 0.25)')
+    
+    #video data aug
+    parser.add_argument('--color_jitter', action="store_true")
+    parser.add_argument('--random_rotation', action="store_true")
+    parser.add_argument('--random_gaussian_blur', action="store_true")
+    parser.add_argument('--random_motion_blur', action="store_true")
+    parser.add_argument('--random_affine', action="store_true")
+    parser.add_argument('--random_gaussian_noise', action="store_true")
+    parser.add_argument('--random_resized_cropping', action="store_true")
+    parser.add_argument('--elastic_transformation', action="store_true")
+    parser.add_argument('--random_perspective', action="store_true")
+    parser.add_argument('--random_erasing', action="store_true")
 
     # cutmix and mixup (multi image data aug)
     parser.add_argument('--cm', action='store_true', help='Use Cutmix')
@@ -264,42 +283,140 @@ class DatasetImgTarget(data.Dataset):
 
 
 def build_dataloaders(args):
-    train_transform, test_transform = build_transform(args)
-
-
+    
     # choose dataset, download train and test splits if needed
-    if args.dataset_name == 'cifar10':
-        train_ds = datasets.CIFAR10(root=args.dataset_root_path, train=True,
-                                    transform=train_transform, download=True)
-        test_ds = datasets.CIFAR10(root=args.dataset_root_path, train=False,
-                                    transform=test_transform, download=True)
-        args.num_classes = 10
-    elif args.dataset_name == 'cifar100':
-        train_ds = datasets.CIFAR100(root=args.dataset_root_path, train=True,
-                                    transform=train_transform, download=True)
-        test_ds = datasets.CIFAR100(root=args.dataset_root_path, train=False,
-                                    transform=test_transform, download=True)
-        args.num_classes = 100
-    else:
-        train_ds = DatasetImgTarget(args, split='train', transform=train_transform)
-        test_ds = DatasetImgTarget(args, split='test', transform=test_transform)
+    
+    
+    if args.video:
+        # Make sure to modify this so standard_transform return transform for train and test
+        train_transform, test_transform = standard_transform(args)
+        train_ds = DatasetVideoTarget(root=args.dataset_root_path, split='train',  transform=train_transform)
+        test_ds = DatasetVideoTarget(root=args.dataset_root_path, split='train',  transform=test_transform)
         args.num_classes = train_ds.num_classes
+        
+        train_loader = data.DataLoader(train_ds, args.batch_size, shuffle=True, drop_last=True)
+        test_loader = data.DataLoader(test_ds, args.batch_size, shuffle=False, drop_last=False)
+        
+        print(f"train df num classes {train_ds.num_classes}")
+        return train_loader, test_loader
+  
+    else:
+        train_transform, test_transform = build_transform(args)
+        if args.dataset_name == 'cifar10':
+            train_ds = datasets.CIFAR10(root=args.dataset_root_path, train=True,
+                                        transform=train_transform, download=True)
+            test_ds = datasets.CIFAR10(root=args.dataset_root_path, train=False,
+                                        transform=test_transform, download=True)
+            args.num_classes = 10
+        elif args.dataset_name == 'cifar100':
+            train_ds = datasets.CIFAR100(root=args.dataset_root_path, train=True,
+                                        transform=train_transform, download=True)
+            test_ds = datasets.CIFAR100(root=args.dataset_root_path, train=False,
+                                        transform=test_transform, download=True)
+            args.num_classes = 100
+        else:
+            train_ds = DatasetImgTarget(args, split='train', transform=train_transform)
+            test_ds = DatasetImgTarget(args, split='test', transform=test_transform)
+            args.num_classes = train_ds.num_classes
 
 
-    setattr(args, f'num_images_train', train_ds.__len__())
-    setattr(args, f'num_images_test', test_ds.__len__())
-    print(f'''{args.dataset_name}
-          N_train={args.num_images_train}
-          N_test={args.num_images_test}
-          K={args.num_classes}.''')
+        setattr(args, f'num_images_train', train_ds.__len__())
+        setattr(args, f'num_images_test', test_ds.__len__())
+        print(f'''{args.dataset_name}
+            N_train={args.num_images_train}
+            N_test={args.num_images_test}
+            K={args.num_classes}.''')
 
-    # shuffle so that each epoch and each iteration are different
-    # (stochasticness can be good for training deep learning models), drop_last for train speed
-    # c, h, w -> b, c, h, w in an iterable way
-    train_loader = data.DataLoader(train_ds, args.batch_size, shuffle=True, drop_last=True)
-    test_loader = data.DataLoader(test_ds, args.batch_size, shuffle=False, drop_last=False)
-    return train_loader, test_loader
+        # shuffle so that each epoch and each iteration are different
+        # (stochasticness can be good for training deep learning models), drop_last for train speed
+        # c, h, w -> b, c, h, w in an iterable way
+        train_loader = data.DataLoader(train_ds, args.batch_size, shuffle=True, drop_last=True)
+        test_loader = data.DataLoader(test_ds, args.batch_size, shuffle=False, drop_last=False)
+        return train_loader, test_loader
 
+
+class TIMMVideoModel(nn.Module):
+    def __init__(self, model_name, spatial_pooling='avg_pool', temporal_pooling='avg_pool', pretrained = False, num_classes = 12, image_size = 224, sd = 0.0, num_frames=10):
+        super().__init__()
+        
+        print("Pretrained?", pretrained)
+        
+        self.encoder  = nn.TransformerEncoderLayer(d_model=512, nhead=8, batch_first=True)
+        self.encoder.to('cuda')
+        
+        if 'vgg' in model_name:
+            self.backbone = timm.create_model(
+                model_name, pretrained=pretrained, num_classes=0,
+                global_pool='', pre_logits=False)
+        elif any(model in model_name for model in ['vit', 'deit', 'trans']):
+            self.backbone = timm.create_model(
+                model_name, pretrained=pretrained, num_classes=0,
+                img_size=image_size, drop_path_rate=sd, global_pool='')
+        else:
+            try:
+                self.backbone = timm.create_model(
+                    model_name, pretrained=pretrained, num_classes=0,
+                    drop_path_rate=sd, global_pool='')
+            except:
+                # certain models do not have drop_path_rate
+                self.backbone = timm.create_model(
+                    model_name, pretrained=pretrained, num_classes=0,
+                    global_pool='')
+                
+        output = self.get_out_features(image_size)
+        _, d, bsd = self.get_out_features(image_size)
+                
+        if spatial_pooling == 'avg_pool':
+            if bsd: 
+                self.spatial_pooling = Reduce('bf s d -> bf d', 'mean')
+            else:
+                self.spatial_pooling = Reduce('bf d fh fw -> bf d', 'mean')
+
+        self.pos_embedding = nn.Embedding(num_frames, d)
+        
+        if temporal_pooling == 'avg_pool':
+            self.temporal = Reduce('b f d -> b d', 'mean')
+
+        print("D is", d)
+        print("Num classes is", num_classes)
+        self.classifier = nn.Linear(d, num_classes)
+        
+    @torch.no_grad()
+    def get_out_features(self, image_size):
+        x = torch.rand(2, 3, image_size, image_size)
+        x = self.backbone(x)
+
+        if len(x.shape) == 3:
+            b, s, d = x.shape
+            bsd = True
+        elif len(x.shape) == 4:
+            b, d, h, w = x.shape
+            s = h * w
+            bsd = False
+
+        return s, d, bsd
+
+    def forward(self, x):
+        # X shape is batch, frame, channels, height, widht
+        # print("X shape is ", x.shape)
+        b, f, _, _, _ = x.shape
+        x = rearrange(x, 'b f c h w -> (b f) c h w')
+        x = self.backbone(x)
+        x = self.spatial_pooling(x)
+        x = rearrange(x, '(b f) d -> b f d', b=b, f=f)
+        # x = self.temporal(x)
+        # x = self.classifier(x)
+        # print("Shape of x before encoder", x.shape)
+        # self.encoder.to('cuda')
+        positions = torch.arange(f, device=x.device)
+        x = x + self.pos_embedding(positions)  # (b, f, d)
+        x = self.encoder(x)
+        # print("After encoder shape: ", x.shape)
+        x = self.classifier(x)
+        # print("After classifier shape: ", x.shape)
+        x = reduce(x, "b f d -> b d", "mean")
+        return x
+        
 
 class TIMMModel(nn.Module):
     def __init__(self, model_name, pretrained=False, num_classes=10,
@@ -366,7 +483,19 @@ class TIMMModel(nn.Module):
 
 
 def build_model(args, print_model=False):
-    model = TIMMModel(args.model_name, args.pretrained, args.num_classes,
+    if(args.video):
+        model = TIMMVideoModel(
+            model_name=args.model_name,
+            pretrained=args.pretrained,
+            num_classes=args.num_classes,
+            image_size=args.image_size,
+            sd=args.sd,
+            # spatial_pooling=args.spatial_pooling,
+            # temporal_pooling=args.temporal_pooling,
+            num_frames=args.uniform_temporal_subsample,  
+        )
+    else:
+        model = TIMMModel(args.model_name, args.pretrained, args.num_classes,
                         args.image_size, args.sd)
 
     model.to(args.device)
@@ -417,6 +546,8 @@ def train_loop(args, train_loader, model, criterion, optimizer):
         if y_a is not None:
             loss = mixup_criterion(criterion, outputs, y_a, y_b, lam)
         else:
+            # print("Shape of outputs is: ", outputs.shape)
+            # print("Shape of labels is: ", labels.shape)
             loss = criterion(outputs, labels)
 
 
