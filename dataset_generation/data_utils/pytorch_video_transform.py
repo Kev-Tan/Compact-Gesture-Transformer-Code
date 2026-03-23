@@ -1,31 +1,33 @@
 from torchvision.transforms import Compose
-from pytorchvideo.transforms import UniformTemporalSubsample
+from torchvision import transforms
 from .kornia_transform import KorniaVideoTransform
+from pytorchvideo.transforms import UniformTemporalSubsample
 import argparse
 from torchvision import transforms
 
 
 def standard_transform(args):
     
-    transform = []
+    transform_list = []
     print(args)
     
-    if(args.uniform_temporal_subsample):
-        transform.append(UniformTemporalSubsample(args.uniform_temporal_subsample))
+    if args.uniform_temporal_subsample:
+        transform_list.append(UniformTemporalSubsample(args.uniform_temporal_subsample))
     
-    transform.append(KorniaVideoTransform(args))
-    train_transform = Compose(transform)
+    transform_list.append(KorniaVideoTransform(args))
+    train_transform = Compose(transform_list)
     
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
     test_transform = Compose([
-    transforms.TemporalUniformSample(num_frames=args.uniform_temporal_subsdample),
+    UniformTemporalSubsample(args.uniform_temporal_subsample),
     transforms.Resize(256),
     transforms.CenterCrop(args.image_size),
-    transforms.Normalize(mean, std)
+    # transforms.Normalize(mean, std),
 ])
     
     return train_transform, test_transform
+    # return train_transform
 
 def main():
     parser = argparse.ArgumentParser()

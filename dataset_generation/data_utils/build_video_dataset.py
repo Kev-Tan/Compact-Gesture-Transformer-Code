@@ -46,7 +46,8 @@ class DatasetVideoTarget(data.Dataset):
     def __init__(self, root, split, transform = None , n_frames = 20):
         # Split is train, test, val
         
-        self.transform = transform
+        self.train_transform = transform[0]
+        self.test_transform = transform[1]
         self.root = root
         self.split = split
         self.images_folder = root
@@ -102,8 +103,15 @@ class DatasetVideoTarget(data.Dataset):
         # clip = einops.rearrange(clip,"f h w c -> f c h w")
         clip = einops.rearrange(clip,"f h w c -> c f h w")
         clip = torch.from_numpy(clip)
+        clip = clip.float() / 255.0
         # print("Shape of clip before is before transform", clip.shape)
-        clip = self.transform(clip)
+        # print("ERROR")
+        # print(clip.shape)
+        if(self.train_transform and (self.split=="train" or self.split=="val")):
+            clip = self.train_transform(clip)
+        else:
+            clip = self.test_transform(clip)
+        
         clip = einops.rearrange(clip,"f c h w -> c f h w")
         # print("Shape of clip is ", clip.shape)
 
@@ -117,8 +125,8 @@ def vis_dataset(args):
     transform = standard_transform(args)
     result_dir = r"dataset_generation\\tester_images"
     train_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
+    val_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='val', transform=transform), batch_size=1)
     test_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
-    val_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='val'), batch_size=1)
     for split, loader in zip(['train', 'val', 'test'], [train_set, val_set, test_set]):
         for idx, (images, _) in enumerate(loader):
             # print("Shape of images is ", images.shape)
@@ -167,21 +175,27 @@ def main():
     parser.add_argument('--elastic_transformation', action="store_true")
     parser.add_argument('--random_perspective', action="store_true")
     parser.add_argument('--random_erasing', action="store_true")
-    
+    parser.add_argument('--image_size',type=int, default=None, metavar='N',help='Convert the image to a defined image sized' )
 
     
     args = parser.parse_args()
     
 
     if(args.dataset_name =='briareo'):
-        generate_csv(args.dataset_root_path, split='train')
-        generate_csv(args.dataset_root_path, split='val')
-        generate_csv(args.dataset_root_path, split='test')
+        generate_csv(args, split='train')
+        generate_csv(args, split='val')
+        generate_csv(args, split='test')
+    if(args.dataset_name == 'egogesture'):
+        generate_csv(args, split='train')
+        generate_csv(args, split='val')
+        generate_csv(args, split='test')
         
         if(args.visualize):
             vis_dataset(args)
         else:
             print("not visualize")
+            
+    
     
 
 
