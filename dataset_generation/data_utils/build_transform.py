@@ -10,29 +10,16 @@ def standard_transform(args, is_train):
     
     t = []
     
-    # Convert PIL image to tensor first
-    # Move this to end? Some operations can be applied before transforms to tensor
-    # Need to do normalization -> might affect models
-    # Reference normalization from original codebase (https://github.com/arkel23/DownSamplingInterLayerAdapter/blob/main/fgir_vit/data_utils/build_transform.py)
-    # Resizing operations need to be used
-    # Transforms v2 
-    
-    # What is the way that resizing is normally done for hand gesture? random cropping with restrictions?
-    # Example of repos that they apply transformations to hand gesture
-        # What's a good value?
-        # Was it used in previous repos
     
     t.append(transforms.ToTensor())
     
     if(args.random_erasing):
         t.append(transforms.RandomErasing(p=0.5, scale=(0.02, 0.33)))
         
-    # Not applied to hand gesture
     if(args.random_horizontal_flip):
         t.append(transforms.RandomHorizontalFlip(p=0.5))
         
     if(args.random_cropping):
-        # Don't need random apply
         t.append(transforms.RandomApply([transforms.RandomResizedCrop(112)], p=0.5))
         
     if(args.restricted_rotation):
@@ -44,12 +31,7 @@ def standard_transform(args, is_train):
         
     if(args.translate):
         t.append(transforms.RandomApply([transforms.RandomAffine(degrees=0, translate=(0.2, 0.2))], p=0.5))
-        
-    # Other transformations to implement
-        # Noise
-        # Fisheye
-        
-    
+
     transform = transforms.Compose(t)
     print(transform)
     return transform
@@ -57,8 +39,6 @@ def standard_transform(args, is_train):
 def main():
     print("Testing on a single image")
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--image_path', type=str, required = True, help="path to dataset root")
-    # parser.add_argument('--dataset_name', type=str, required = True, help = "name of the dataset")
     parser.add_argument('--random_erasing', action="store_true", help = "trigger random erasing operations")
     parser.add_argument('--random_horizontal_flip', action="store_true")
     parser.add_argument('--random_cropping', action="store_true")

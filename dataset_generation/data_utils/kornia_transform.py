@@ -122,13 +122,9 @@ class KorniaVideoTransform(nn.Module):
         clip: (C, T, H, W), usually uint8 in [0, 255]
         returns: (C, T, H, W), float32 in [0, 1]
         """
-        
-        # print("Shape of clip is ", clip.shape)
-        
+                
         if clip.ndim != 4:
             raise ValueError(f"Expected clip shape (C, T, H, W), got {clip.shape}")
-
-        # Convert uint8 -> float32 and normalize to [0, 1]
         if clip.dtype == torch.uint8:
             clip = clip.float() / 255.0
         else:

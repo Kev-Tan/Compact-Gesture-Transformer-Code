@@ -38,23 +38,20 @@ class Egogesture_csv(Dataset):
             self.image_path = []
             self.labels = []
             if split == 'train':
-                # Loads txt file that contains information the path and which frame is a gesture
                 images_info_path = os.path.join(root, 'trainlistbinary.txt')
                 with open(images_info_path, 'r') as f:
                     images_info_array = f.readlines()
             elif split == "test":
-                # Loads txt file that contains information the path and which frame is a gesture
                 images_info_path = os.path.join(root, 'testlistbinary.txt')
                 with open(images_info_path, 'r') as f:
                     images_info_array = f.readlines()
             elif split == "val":
-                # Loads txt file that contains information the path and which frame is a gesture
                 images_info_path = os.path.join(root, 'vallistbinary.txt')
                 with open(images_info_path, 'r') as f:
                     images_info_array = f.readlines()
                 
-            print(len(images_info_array))
-            # Iterate and separate it based on the space
+            # In case it takes a long time, try taking the first n elements of images_info_array
+            # This code is very inefficient but it's a byproduct of the label and path structure
             for info in images_info_array[:10]:
                 try:
                     split_info = info.split()
@@ -70,16 +67,6 @@ class Egogesture_csv(Dataset):
                     rgb_group = path_to_images.split('/')[3]
                     
                     
-                    # print("Path is", path_to_images)
-                    # print("Subject is:", subject)
-                    # print("Scene is: ", scene)
-                    # print("Is gesture: ", True if is_gesture == 2 else False)
-                    # print("Starting frame: ", starting_frame)
-                    # print("Ending frame: ", ending_frame)
-                    
-                    
-                    
-                    # If it's a gesture, then open all the csv files within the path and scene
                     if(is_gesture == 2):
                         csv_files_path = os.path.join(root, 'labels', subject, scene)
                         labels_information = []
@@ -87,7 +74,6 @@ class Egogesture_csv(Dataset):
                             if file.endswith(".csv"):
                                 correct_file_path = os.path.join(csv_files_path, file)
                                 csv_content = pd.read_csv(correct_file_path, header=None)
-                                # Store the csv files within an array called labels_information
                                 for _, row in csv_content.iterrows():
                                     labels_information.append(row.tolist())
                                 
@@ -107,11 +93,6 @@ class Egogesture_csv(Dataset):
                                 if(gestures_path_list):
                                     break
                                 
-                                
-                                # print(labels_information)
-                    
-                    
-                    
                 except:
                     print("ERROR ON PATH", path_to_images)
                     
@@ -156,9 +137,9 @@ def main():
         dataset_val = Briareo_csv(root = args.dataset_root_path, split='val')
         dataset_test = Briareo_csv(root = args.dataset_root_path, split='test')
         
-        generate_csv(args.dataset_root_path, split='train')
-        generate_csv(args.dataset_root_path, split='val')
-        generate_csv(args.dataset_root_path, split='test')
+        generate_csv(args, split='train')
+        generate_csv(args, split='val')
+        generate_csv(args, split='test')
         
     elif(args.dataset_name == 'egogesture'):
         dataset_train = Egogesture_csv(root = args.dataset_root_path, split='train')
@@ -168,7 +149,7 @@ def main():
         generate_csv(args, split='train')
         generate_csv(args, split='test')
         generate_csv(args, split='val')
-        dataset_train.check_paths_and_labels()
+        
 
 if __name__ == "__main__":
     main()
