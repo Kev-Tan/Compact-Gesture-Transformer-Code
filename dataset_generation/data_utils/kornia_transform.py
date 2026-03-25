@@ -149,8 +149,6 @@ def main():
     transform = KorniaVideoTransform(args)
     print(transform)
     
-    
-    
 
 if __name__ == "__main__":
     main()
