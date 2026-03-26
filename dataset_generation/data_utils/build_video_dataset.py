@@ -29,7 +29,7 @@ from torchvision.utils import save_image
 
 # Relative import
 from .generate_csv import generate_csv
-from .pytorch_video_transform import standard_transform
+from .build_video_transform import standard_transform
 from .temporal_transform import sampling
 
 class DatasetVideoTarget(data.Dataset):
@@ -126,14 +126,17 @@ def main():
     args = parser.parse_args()
     
 
-    if(args.dataset_name =='briareo'):
+    file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
+    if not file_path:
         generate_csv(args, split='train')
+        
+    file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
+    if not file_path:
+        generate_csv(args, split='test') 
+        
+    file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
+    if not file_path:
         generate_csv(args, split='val')
-        generate_csv(args, split='test')
-    if(args.dataset_name == 'egogesture'):
-        generate_csv(args, split='train')
-        generate_csv(args, split='val')
-        generate_csv(args, split='test')
         
         if(args.visualize):
             vis_dataset(args)

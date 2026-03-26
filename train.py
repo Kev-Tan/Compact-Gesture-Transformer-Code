@@ -25,7 +25,7 @@ from einops import rearrange
 from mix import get_mix, mixup_criterion
 
 from dataset_generation.data_utils.build_video_dataset import DatasetVideoTarget
-from dataset_generation.data_utils.pytorch_video_transform import standard_transform
+from dataset_generation.data_utils.build_video_transform import standard_transform
 from einops import reduce
 
 

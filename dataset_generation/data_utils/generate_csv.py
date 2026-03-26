@@ -12,6 +12,9 @@ import argparse
 from torchvision.utils import save_image
 from torch.utils.data.dataset import Dataset
 import torch
+from pathlib import Path
+
+
 class Briareo_csv(Dataset):
     def __init__(self, root, split, transform=None):
         self.transform = transform
@@ -52,8 +55,13 @@ class Egogesture_csv(Dataset):
                 
             # In case it takes a long time, try taking the first n elements of images_info_array
             # This code is very inefficient but it's a byproduct of the label and path structure
-            for info in images_info_array[:10]:
+            count = 0
+            
+            for info in images_info_array:
+                print(count)
+                count+=1
                 try:
+                    # print(info)
                     split_info = info.split()
                     path_to_images = split_info[0]
                     is_gesture = int(split_info[1])
@@ -79,9 +87,9 @@ class Egogesture_csv(Dataset):
                                 
                                 gestures_path_list = []
                                 for columns in labels_information:
-                                    print(columns)
-                                    print(starting_frame)
-                                    print(ending_frame)
+                                    # print(columns)
+                                    # print(starting_frame)
+                                    # print(ending_frame)
                                     if columns[1]==starting_frame and columns[2]==ending_frame:
                                         for i in range(starting_frame, ending_frame + 1):
                                             path = os.path.join('frames', subject, scene, "Color", rgb_group, f"{i:06}.jpg")
@@ -89,15 +97,15 @@ class Egogesture_csv(Dataset):
                                         self.labels.append(columns[0])
                                         break
                                 
-                                self.image_path.append(gestures_path_list)
                                 if(gestures_path_list):
+                                    self.image_path.append(gestures_path_list)
                                     break
                                 
                 except:
                     print("ERROR ON PATH", path_to_images)
                     
                 
-            return
+            # return
         
         def __len__(self):
             return len(self.image_path)
@@ -119,7 +127,14 @@ def generate_csv(args, split):
         dataset_obj = Egogesture_csv(root = args.dataset_root_path, split = split)
     dic_target_img_dir = {}
     for index, (id, path) in enumerate(DataLoader(dataset_obj)):
-        dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path}
+        try:
+            dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path}
+        except:
+            class_id = int(id[0])
+            dic_target_img_dir[index] = {'class_id': class_id, 'dir': path}
+            # print("ERRROR")
+            # print(id)
+            # print(path)
         
     df = pd.DataFrame.from_dict(dic_target_img_dir, orient='index')
     fp = os.path.join(args.dataset_root_path, f"{split}.csv")
@@ -132,24 +147,18 @@ def main():
     parser.add_argument('--dataset_name', type=str, required = True, help = "name of the dataset")
     args = parser.parse_args()
     
-    if(args.dataset_name =='briareo'):
-        dataset_train = Briareo_csv(root = args.dataset_root_path, split='train')
-        dataset_val = Briareo_csv(root = args.dataset_root_path, split='val')
-        dataset_test = Briareo_csv(root = args.dataset_root_path, split='test')
         
+    file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
+    if not file_path:
         generate_csv(args, split='train')
+        
+    file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
+    if not file_path:
+        generate_csv(args, split='test') 
+        
+    file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
+    if not file_path:
         generate_csv(args, split='val')
-        generate_csv(args, split='test')
-        
-    elif(args.dataset_name == 'egogesture'):
-        dataset_train = Egogesture_csv(root = args.dataset_root_path, split='train')
-        dataset_val = Egogesture_csv(root = args.dataset_root_path, split='val')
-        dataset_test = Egogesture_csv(root = args.dataset_root_path, split='test')
-        
-        generate_csv(args, split='train')
-        generate_csv(args, split='test')
-        generate_csv(args, split='val')
-        
 
 if __name__ == "__main__":
     main()
