@@ -13,6 +13,7 @@ def standard_transform(args):
     
     if args.uniform_temporal_subsample:
         transform_list.append(UniformTemporalSubsample(args.uniform_temporal_subsample))
+        
     
     transform_list.append(KorniaVideoTransform(args))
     train_transform = Compose(transform_list)

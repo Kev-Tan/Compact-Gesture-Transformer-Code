@@ -149,15 +149,18 @@ def main():
     
         
     file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
-    if not file_path:
+    if not os.path.exists(file_path):
+        print("Generate train")
         generate_csv(args, split='train')
         
     file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
-    if not file_path:
+    if not os.path.exists(file_path):
+        print("Generate test")
         generate_csv(args, split='test') 
         
     file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
-    if not file_path:
+    if not os.path.exists(file_path):
+        print("Generate val")
         generate_csv(args, split='val')
 
 if __name__ == "__main__":

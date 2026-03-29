@@ -135,6 +135,11 @@ def parse_args():
                         help='Random Erasing probability (def: 0.25)')
     
     #video data aug
+    parser.add_argument('--uniform_temporal_subsample',type=int, default=None, metavar='N',help='Apply uniform temporal subsampling with N frames' )
+    parser.add_argument('--n_frames',type=int, default=None, metavar='N',help='number of frames per batch' )
+    parser.add_argument('--centralized_temporal_subsample', action="store_true")  
+    parser.add_argument('--random_temporal_subsample', action="store_true")  
+    parser.add_argument('--stride_temporal_subsample', action="store_true")  
     parser.add_argument('--color_jitter', action="store_true")
     parser.add_argument('--random_rotation', action="store_true")
     parser.add_argument('--random_gaussian_blur', action="store_true")
@@ -145,6 +150,7 @@ def parse_args():
     parser.add_argument('--elastic_transformation', action="store_true")
     parser.add_argument('--random_perspective', action="store_true")
     parser.add_argument('--random_erasing', action="store_true")
+    parser.add_argument('--image_size',type=int, default=None, metavar='N',help='Convert the image to a defined image sized' )
 
     # cutmix and mixup (multi image data aug)
     parser.add_argument('--cm', action='store_true', help='Use Cutmix')

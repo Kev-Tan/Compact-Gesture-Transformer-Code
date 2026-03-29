@@ -31,15 +31,17 @@ from torchvision.utils import save_image
 from .generate_csv import generate_csv
 from .build_video_transform import standard_transform
 from .temporal_transform import sampling
+from .custom_temporal_transform import centralized_temporal_subsample, random_temporal_subsample, stride_temporal_subsample
 
 class DatasetVideoTarget(data.Dataset):
-    def __init__(self, root, split, transform = None , n_frames = 20):  
+    def __init__(self, args, root, split, transform = None):  
         self.train_transform = transform[0]
         self.test_transform = transform[1]
+        self.args = args
         self.root = root
         self.split = split
         self.images_folder = root
-        self.n_frames = n_frames
+        self.n_frames = args.n_frames
         print("---self.root", self.root)
         path_csv = os.path.join(self.root, f'{split}.csv')
         self.df = pd.read_csv(path_csv, sep=',')
@@ -80,6 +82,19 @@ class DatasetVideoTarget(data.Dataset):
         clip = einops.rearrange(clip,"f h w c -> c f h w")
         clip = torch.from_numpy(clip)
         clip = clip.float() / 255.0
+        
+        
+        if(self.args.centralized_temporal_subsample):
+            print(paths[0])
+            clip = centralized_temporal_subsample(clip, self.n_frames)
+        if(self.args.random_temporal_subsample):
+            print(paths[0])
+            clip = random_temporal_subsample(clip, self.n_frames)
+        if(self.args.stride_temporal_subsample):
+            print(paths[0])
+            clip = stride_temporal_subsample(clip, 2,  self.n_frames)
+        
+        
         if(self.train_transform and (self.split=="train" or self.split=="val")):
             clip = self.train_transform(clip)
         else:
@@ -94,9 +109,9 @@ def vis_dataset(args):
 
     transform = standard_transform(args)
     result_dir = r"dataset_generation\\tester_images"
-    train_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
-    val_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='val', transform=transform), batch_size=1)
-    test_set = DataLoader(DatasetVideoTarget(root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
+    train_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
+    val_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='val', transform=transform), batch_size=1)
+    test_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
     for split, loader in zip(['train', 'val', 'test'], [train_set, val_set, test_set]):
         for idx, (images, _) in enumerate(loader):
             batch_size, frames, channels, height, width = images.shape
@@ -110,6 +125,10 @@ def main():
     parser.add_argument('--dataset_name', type=str, required = True, help = "name of the dataset")
     parser.add_argument('--visualize', action="store_true")
     parser.add_argument('--uniform_temporal_subsample',type=int, default=None, metavar='N',help='Apply uniform temporal subsampling with N frames' )
+    parser.add_argument('--n_frames',type=int, default=None, metavar='N',help='number of frames per batch' )
+    parser.add_argument('--centralized_temporal_subsample', action="store_true")  
+    parser.add_argument('--random_temporal_subsample', action="store_true")  
+    parser.add_argument('--stride_temporal_subsample', action="store_true")  
     parser.add_argument('--color_jitter', action="store_true")
     parser.add_argument('--random_rotation', action="store_true")
     parser.add_argument('--random_gaussian_blur', action="store_true")
@@ -127,21 +146,24 @@ def main():
     
 
     file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
-    if not file_path:
+    if not os.path.exists(file_path):
+        print("Generate train")
         generate_csv(args, split='train')
         
     file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
-    if not file_path:
+    if not os.path.exists(file_path):
+        print("Generate test")
         generate_csv(args, split='test') 
         
     file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
-    if not file_path:
+    if not os.path.exists(file_path):
+        print("Generate val")
         generate_csv(args, split='val')
         
-        if(args.visualize):
-            vis_dataset(args)
-        else:
-            print("not visualize")
+    if(args.visualize):
+        vis_dataset(args)
+    else:
+        print("Not visualized")
             
     
     
