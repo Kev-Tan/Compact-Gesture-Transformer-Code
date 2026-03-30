@@ -13,6 +13,7 @@ from torchvision.utils import save_image
 from torch.utils.data.dataset import Dataset
 import torch
 from pathlib import Path
+import json
 
 
 class Briareo_csv(Dataset):
@@ -33,7 +34,43 @@ class Briareo_csv(Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
         return self.image_path[idx]['label'], self.image_path[idx]['data']
+
+class FineDiving_csv(Dataset):
+    def __init__(self, root, split, transform = None):
+        self.transform = transform
+        self.video_path = []
+        self.labels = []
+        self.start_frame = []
+        self.end_frame = []
+        self.data = None
+        if split == 'train':
+            video_info_path = os.path.join(root, 'Diving48_train.json')
+            print(video_info_path)
+            with open(video_info_path, 'r') as file:
+                data = json.load(file)
+                self.data = data
+        if split == 'test':
+            video_info_path = os.path.join(root, 'Diving48_test.json')
+            print(video_info_path)
+            with open(video_info_path, 'r') as file:
+                data = json.load(file)
+                self.data = data
+        for video in self.data:
+            self.video_path.append(video['vid_name']) 
+            self.labels.append(video['label']) 
+            self.start_frame.append(video['start_frame']) 
+            self.end_frame.append(video['end_frame']) 
+            
+        print(self.end_frame)
+                    
+    def __len__(self):
+        return len(self.video_path)
     
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        return self.labels[idx], self.video_path[idx], int(self.start_frame[idx]), int(self.end_frame[idx])
+        
     
 class Egogesture_csv(Dataset):
         def __init__(self, root, split, transform = None):
@@ -119,12 +156,16 @@ class Egogesture_csv(Dataset):
             print(self.image_path)     
             print(self.labels)
 
-    
+
+
+
 def generate_csv(args, split):
     if(args.dataset_name == 'briareo'):
         dataset_obj = Briareo_csv(root = args.dataset_root_path, split = split)
     if(args.dataset_name == 'egogesture'):
         dataset_obj = Egogesture_csv(root = args.dataset_root_path, split = split)
+    if(args.dataset_name == 'finediving'):
+        dataset_obj = FineDiving_csv(root = args.dataset_root_path, split = split)
     dic_target_img_dir = {}
     for index, (id, path) in enumerate(DataLoader(dataset_obj)):
         try:
@@ -148,20 +189,37 @@ def main():
     args = parser.parse_args()
     
         
-    file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
-    if not os.path.exists(file_path):
-        print("Generate train")
-        generate_csv(args, split='train')
+    # file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
+    # if not os.path.exists(file_path):
+    #     print("Generate train")
+    #     generate_csv(args, split='train')
         
-    file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
-    if not os.path.exists(file_path):
-        print("Generate test")
-        generate_csv(args, split='test') 
+    # file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
+    # if not os.path.exists(file_path):
+    #     print("Generate test")
+    #     generate_csv(args, split='test') 
         
-    file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
-    if not os.path.exists(file_path):
-        print("Generate val")
-        generate_csv(args, split='val')
+    # file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
+    # if not os.path.exists(file_path):
+    #     print("Generate val")
+    #     generate_csv(args, split='val')
+    
+    dataset_obj = FineDiving_csv(args.dataset_root_path, 'test')
+    print(len(dataset_obj))
+    dic_target_img_dir = {}
+    for index, (id, path, start_frame, end_frame) in enumerate(DataLoader(dataset_obj)):
+        try:
+            dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
+        except:
+            class_id = int(id[0])
+            dic_target_img_dir[index] = {'class_id': class_id, 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
+            # print("ERRROR")
+            # print(id)
+            # print(path)
+            
+        df = pd.DataFrame.from_dict(dic_target_img_dir, orient='index')
+        fp = os.path.join(args.dataset_root_path, f"test.csv")
+        df.to_csv(fp, header = True, index= False)
 
 if __name__ == "__main__":
     main()
