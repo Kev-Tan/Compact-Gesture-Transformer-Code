@@ -28,13 +28,11 @@ from torchvision.utils import save_image
 import decord
 
 
-# Relative import
 from .generate_csv import generate_csv
-from .build_video_transform import standard_transform
-from .temporal_transform import sampling
-from .custom_temporal_transform import centralized_temporal_subsample, random_temporal_subsample, stride_temporal_subsample
-
-class MP4DatasetVideoTarget(data.Dataset):
+from .transformation_function.build_video_transform import standard_transform
+from .transformation_function.temporal_transform import sampling
+from .transformation_function.custom_temporal_transform import centralized_temporal_subsample, random_temporal_subsample, stride_temporal_subsample
+class Mp4DatasetVideoTarget(data.Dataset):
     def __init__(self, args, root, split, transform = None):  
         self.args = args
         self.root = root
@@ -103,7 +101,7 @@ def vis_dataset(args):
     result_dir = r"dataset_generation\\tester_images"
     # train_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
     # val_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='val', transform=transform), batch_size=1)
-    test_set = DataLoader(MP4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
+    test_set = DataLoader(Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
     print("YEEEE-------")
     for split, loader in zip(['test'], [test_set]):
         for idx, (images, _) in enumerate(loader):
@@ -150,9 +148,9 @@ def main():
         
     transform = standard_transform(args)
     result_dir = r"dataset_generation\\tester_images"
-    test_set = MP4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform)
+    test_set = Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform)
     print(next(iter(DataLoader(test_set))))
-    # test_set = DataLoader(MP4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
+    # test_set = DataLoader(Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
         
     # file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
     # if not os.path.exists(file_path):

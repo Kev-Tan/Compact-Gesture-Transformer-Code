@@ -27,11 +27,10 @@ from torchvision.transforms._transforms_video import NormalizeVideo
 from torchvision.utils import save_image
 
 
-# Relative import
 from .generate_csv import generate_csv
-from .build_video_transform import standard_transform
-from .temporal_transform import sampling
-from .custom_temporal_transform import centralized_temporal_subsample, random_temporal_subsample, stride_temporal_subsample
+from .transformation_function.build_video_transform import standard_transform
+from .transformation_function.temporal_transform import sampling
+from .transformation_function.custom_temporal_transform import centralized_temporal_subsample, random_temporal_subsample, stride_temporal_subsample
 
 class DatasetVideoTarget(data.Dataset):
     def __init__(self, args, root, split, transform = None):  
