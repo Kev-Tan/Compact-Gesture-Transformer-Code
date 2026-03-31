@@ -1,5 +1,6 @@
 *.png
 *.jpg
+*.mp4
 
 # weights
 *.ckpt
@@ -21,7 +22,10 @@
 !requirements_conda.txt
 
 # directories
-**/data/
+!**/data/                # Explicitly allow the data folder
+**/data/**/*.png         # Exclude all .png files inside any data folder
+**/data/**/*.rgb         # Exclude all .rgb files inside any data folder
+**/data/**/*.mp4         # Exclude all .mp4 files inside any data folder
 **/ckpts/
 **/flagged/
 **/wandb/
