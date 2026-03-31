@@ -150,7 +150,7 @@ class Egogesture_csv(Dataset):
         def __getitem__(self, idx):
             if torch.is_tensor(idx):
                 idx = idx.tolist()
-            return self.labels[idx], self.image_path[idx]
+            return int(self.labels[idx])-1, self.image_path[idx]
             
         def check_paths_and_labels(self):
             print(self.image_path)     
@@ -189,37 +189,37 @@ def main():
     args = parser.parse_args()
     
         
-    # file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
-    # if not os.path.exists(file_path):
-    #     print("Generate train")
-    #     generate_csv(args, split='train')
+    file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
+    if not os.path.exists(file_path):
+        print("Generate train")
+        generate_csv(args, split='train')
         
-    # file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
-    # if not os.path.exists(file_path):
-    #     print("Generate test")
-    #     generate_csv(args, split='test') 
+    file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
+    if not os.path.exists(file_path):
+        print("Generate test")
+        generate_csv(args, split='test') 
         
-    # file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
-    # if not os.path.exists(file_path):
-    #     print("Generate val")
-    #     generate_csv(args, split='val')
+    file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
+    if not os.path.exists(file_path):
+        print("Generate val")
+        generate_csv(args, split='val')
     
-    dataset_obj = FineDiving_csv(args.dataset_root_path, 'test')
-    print(len(dataset_obj))
-    dic_target_img_dir = {}
-    for index, (id, path, start_frame, end_frame) in enumerate(DataLoader(dataset_obj)):
-        try:
-            dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
-        except:
-            class_id = int(id[0])
-            dic_target_img_dir[index] = {'class_id': class_id, 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
+    # dataset_obj = FineDiving_csv(args.dataset_root_path, 'test')
+    # print(len(dataset_obj))
+    # dic_target_img_dir = {}
+    # for index, (id, path, start_frame, end_frame) in enumerate(DataLoader(dataset_obj)):
+    #     try:
+    #         dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
+    #     except:
+    #         class_id = int(id[0])
+    #         dic_target_img_dir[index] = {'class_id': class_id, 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
             # print("ERRROR")
             # print(id)
             # print(path)
             
-        df = pd.DataFrame.from_dict(dic_target_img_dir, orient='index')
-        fp = os.path.join(args.dataset_root_path, f"test.csv")
-        df.to_csv(fp, header = True, index= False)
+        # df = pd.DataFrame.from_dict(dic_target_img_dir, orient='index')
+        # fp = os.path.join(args.dataset_root_path, f"test.csv")
+        # df.to_csv(fp, header = True, index= False)
 
 if __name__ == "__main__":
     main()

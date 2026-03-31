@@ -26,6 +26,7 @@ from mix import get_mix, mixup_criterion
 
 from dataset_generation.data_utils.build_video_dataset import DatasetVideoTarget
 from dataset_generation.data_utils.transformation_function.build_video_transform import standard_transform
+from dataset_generation.data_utils.mp4_build_video_dataset import Mp4DatasetVideoTarget
 from einops import reduce
 
 
@@ -294,10 +295,16 @@ def build_dataloaders(args):
     
     if args.video:
         # Make sure to modify this so standard_transform return transform for train and test
-        transform = standard_transform(args)
-        train_ds = DatasetVideoTarget(args, root=args.dataset_root_path, split='train',  transform=transform)
-        test_ds = DatasetVideoTarget(args, root=args.dataset_root_path, split='train',  transform=transform)
-        args.num_classes = train_ds.num_classes
+        if args.dataset_name in ['briareo', 'egogesture']:
+            transform = standard_transform(args)
+            train_ds = DatasetVideoTarget(args, root=args.dataset_root_path, split='train',  transform=transform)
+            test_ds = DatasetVideoTarget(args, root=args.dataset_root_path, split='test',  transform=transform)
+            args.num_classes = train_ds.num_classes
+        if args.dataset_name in ['finediving']:
+            transform = standard_transform(args)
+            train_ds = Mp4DatasetVideoTarget(args, root=args.dataset_root_path, split='train',  transform=transform)
+            test_ds = Mp4DatasetVideoTarget(args, root=args.dataset_root_path, split='test',  transform=transform)
+            args.num_classes = train_ds.num_classes
         
         train_loader = data.DataLoader(train_ds, args.batch_size, shuffle=True, drop_last=True)
         test_loader = data.DataLoader(test_ds, args.batch_size, shuffle=False, drop_last=False)

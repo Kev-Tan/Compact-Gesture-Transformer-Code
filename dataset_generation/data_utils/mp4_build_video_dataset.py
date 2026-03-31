@@ -48,6 +48,7 @@ class Mp4DatasetVideoTarget(data.Dataset):
         self.start_frame = self.df['start_frame'].to_numpy()
         self.end_frame = self.df['end_frame'].to_numpy()
         self.targets = self.df['class_id'].to_numpy()
+        self.num_classes = len(set(self.targets))
         
         fixed_data = []
         for i, record in enumerate(self.data):
@@ -70,8 +71,8 @@ class Mp4DatasetVideoTarget(data.Dataset):
         starting_temporal_index = self.start_frame[index]
         ending_temporal_index = self.end_frame[index]
         
-        print(type(starting_temporal_index))
-        print(starting_temporal_index)
+        # print(type(starting_temporal_index))
+        # print(starting_temporal_index)
         
         decord.bridge.set_bridge("torch")
 
@@ -92,7 +93,7 @@ class Mp4DatasetVideoTarget(data.Dataset):
         label = self.targets[index]
         label = torch.LongTensor(np.asarray([label]))
         label = label.squeeze(-1)
-        print(clip.shape)
+        # print(clip.shape)
         return clip.float(), label
 
 def vis_dataset(args):

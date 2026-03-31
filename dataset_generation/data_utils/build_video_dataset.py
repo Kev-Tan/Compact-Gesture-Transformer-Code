@@ -47,6 +47,7 @@ class DatasetVideoTarget(data.Dataset):
         self.targets = self.df['class_id'].to_numpy()
         self.data = self.df['dir'].to_numpy()
         self.num_classes = len(set(self.targets))
+        print("NUM CLASSES IS: ", self.num_classes)
         
         
         fixed_data = []
