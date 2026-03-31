@@ -135,7 +135,6 @@ def parse_args():
                         help='Random Erasing probability (def: 0.25)')
     
     #video data aug
-    parser.add_argument('--uniform_temporal_subsample',type=int, default=None, metavar='N',help='Apply uniform temporal subsampling with N frames' )
     parser.add_argument('--n_frames',type=int, default=None, metavar='N',help='number of frames per batch' )
     parser.add_argument('--centralized_temporal_subsample', action="store_true")  
     parser.add_argument('--random_temporal_subsample', action="store_true")  
@@ -150,7 +149,7 @@ def parse_args():
     parser.add_argument('--elastic_transformation', action="store_true")
     parser.add_argument('--random_perspective', action="store_true")
     parser.add_argument('--random_erasing', action="store_true")
-    parser.add_argument('--image_size',type=int, default=None, metavar='N',help='Convert the image to a defined image sized' )
+    # parser.add_argument('--image_size',type=int, default=None, metavar='N',help='Convert the image to a defined image sized' )
 
     # cutmix and mixup (multi image data aug)
     parser.add_argument('--cm', action='store_true', help='Use Cutmix')
@@ -295,9 +294,9 @@ def build_dataloaders(args):
     
     if args.video:
         # Make sure to modify this so standard_transform return transform for train and test
-        train_transform, test_transform = standard_transform(args)
-        train_ds = DatasetVideoTarget(root=args.dataset_root_path, split='train',  transform=train_transform)
-        test_ds = DatasetVideoTarget(root=args.dataset_root_path, split='train',  transform=test_transform)
+        transform = standard_transform(args)
+        train_ds = DatasetVideoTarget(args, root=args.dataset_root_path, split='train',  transform=transform)
+        test_ds = DatasetVideoTarget(args, root=args.dataset_root_path, split='train',  transform=transform)
         args.num_classes = train_ds.num_classes
         
         train_loader = data.DataLoader(train_ds, args.batch_size, shuffle=True, drop_last=True)
@@ -579,6 +578,9 @@ def train_loop(args, train_loader, model, criterion, optimizer):
         if idx % args.log_freq == 0:
             acc_iter = 100 * (predicted == labels).sum().item() / images.shape[0]
             print(f'{idx} / {len(train_loader)}, Loss: {loss}, Acc@1: {acc_iter}')
+            
+        if idx % 5 == 0 :
+            print(f'{idx} / {len(train_loader)}, Loss: {loss}, Acc@1: {acc_iter}')
 
 
     acc = round(100 * correct / total, 2)
@@ -691,6 +693,7 @@ def main():
 
     # train model: loop through data for x epochs
     for epoch in range(args.epochs):
+        print("Epoch", epoch+1)
         loss, train_acc = train_loop(args, train_loader, model, criterion, optimizer)
 
         # log to command line and wandb once per epoch

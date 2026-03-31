@@ -83,6 +83,14 @@ class MP4DatasetVideoTarget(data.Dataset):
         
         clip = einops.rearrange(frames,"f h w c -> c f h w")
         clip = clip.float()/255.0
+        
+        if(self.train_transform and (self.split=="train" or self.split=="val")):
+            clip = self.train_transform(clip)
+        else:
+            clip = self.test_transform(clip)
+        
+        clip = einops.rearrange(clip,"f c h w -> c f h w")
+        
         label = self.targets[index]
         label = torch.LongTensor(np.asarray([label]))
         label = label.squeeze(-1)
@@ -96,6 +104,7 @@ def vis_dataset(args):
     # train_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
     # val_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='val', transform=transform), batch_size=1)
     test_set = DataLoader(MP4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
+    print("YEEEE-------")
     for split, loader in zip(['test'], [test_set]):
         for idx, (images, _) in enumerate(loader):
             batch_size, frames, channels, height, width = images.shape
@@ -150,8 +159,8 @@ def main():
     #     print("Generate val")
     #     generate_csv(args, split='val')
         
-    # if(args.visualize):
-    #     vis_dataset(args)
+    if(args.visualize):
+        vis_dataset(args)
     # else:
     #     print("Not visualized")
             
