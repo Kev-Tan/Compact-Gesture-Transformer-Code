@@ -78,7 +78,7 @@ class Mp4DatasetVideoTarget(data.Dataset):
         if(self.args.random_temporal_subsample):
             clip = random_temporal_subsample(clip, self.n_frames)
         if(self.args.stride_temporal_subsample):
-            clip = stride_temporal_subsample(clip, 2,  self.n_frames)
+            clip = stride_temporal_subsample(clip, self.args.stride_temporal_subsample,  self.n_frames)
         
         
         if(self.train_transform and (self.split=="train" or self.split=="val")):
@@ -118,7 +118,7 @@ def main():
     parser.add_argument('--n_frames',type=int, default=None, metavar='N',help='number of frames per batch' )
     parser.add_argument('--centralized_temporal_subsample', action="store_true")  
     parser.add_argument('--random_temporal_subsample', action="store_true")  
-    parser.add_argument('--stride_temporal_subsample', action="store_true")  
+    parser.add_argument('--stride_temporal_subsample',type=int, default=None, metavar='N',help='Stride value')  
     parser.add_argument('--color_jitter', action="store_true")
     parser.add_argument('--random_rotation', action="store_true")
     parser.add_argument('--random_gaussian_blur', action="store_true")
@@ -144,11 +144,7 @@ def main():
     if not os.path.exists(file_path):
         print("Generate test")
         generate_csv(args, split='test') 
-        
-    # transform = standard_transform(args)
-    # result_dir = r"dataset_generation\\tester_images"
-    # test_set = Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform)
-    # print(next(iter(DataLoader(test_set))))
+
     if(args.visualize):
         vis_dataset(args)
     else:

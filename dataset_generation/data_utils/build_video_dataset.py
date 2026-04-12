@@ -90,7 +90,7 @@ class DatasetVideoTarget(data.Dataset):
             clip = random_temporal_subsample(clip, self.n_frames)
         if(self.args.stride_temporal_subsample):
             print(paths[0])
-            clip = stride_temporal_subsample(clip, 2,  self.n_frames)
+            clip = stride_temporal_subsample(clip, self.args.stride_temporal_subsample,  self.n_frames)
         
         
         if(self.train_transform and (self.split=="train" or self.split=="val")):
@@ -125,7 +125,7 @@ def main():
     parser.add_argument('--n_frames',type=int, default=None, metavar='N',help='number of frames per batch' )
     parser.add_argument('--centralized_temporal_subsample', action="store_true")  
     parser.add_argument('--random_temporal_subsample', action="store_true")  
-    parser.add_argument('--stride_temporal_subsample', action="store_true")  
+    parser.add_argument('--stride_temporal_subsample',type=int, default=None, metavar='N',help='Stride value')  
     parser.add_argument('--color_jitter', action="store_true")
     parser.add_argument('--random_rotation', action="store_true")
     parser.add_argument('--random_gaussian_blur', action="store_true")
