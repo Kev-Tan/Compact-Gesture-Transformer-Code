@@ -56,10 +56,14 @@ class FineDiving_csv(Dataset):
                 data = json.load(file)
                 self.data = data
         for video in self.data:
-            self.video_path.append(video['vid_name']) 
-            self.labels.append(video['label']) 
-            self.start_frame.append(video['start_frame']) 
-            self.end_frame.append(video['end_frame']) 
+            try:
+                self.video_path.append(video['vid_name']) 
+                self.labels.append(video['label']) 
+                self.start_frame.append(video['start_frame']) 
+                self.end_frame.append(video['end_frame']) 
+            except Exception as e:
+                print(f"Error occured: {e}")
+                print(f"Video is {video}")
             
         print(self.end_frame)
                     
@@ -167,15 +171,28 @@ def generate_csv(args, split):
     if(args.dataset_name == 'finediving'):
         dataset_obj = FineDiving_csv(root = args.dataset_root_path, split = split)
     dic_target_img_dir = {}
-    for index, (id, path) in enumerate(DataLoader(dataset_obj)):
-        try:
-            dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path}
-        except:
-            class_id = int(id[0])
-            dic_target_img_dir[index] = {'class_id': class_id, 'dir': path}
-            # print("ERRROR")
-            # print(id)
-            # print(path)
+    
+    if(args.dataset_name in ['briareo', 'egogesture']):
+        for index, (id, path) in enumerate(DataLoader(dataset_obj)):
+            try:
+                dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path}
+            except:
+                class_id = int(id[0])
+                dic_target_img_dir[index] = {'class_id': class_id, 'dir': path}
+                # print("ERRROR")
+                # print(id)
+                # print(path)
+    
+    elif(args.dataset_name in ['finediving']):
+        for index, (id, path, start_frame, end_frame) in enumerate(DataLoader(dataset_obj)):
+            try:
+                dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
+            except:
+                class_id = int(id[0])
+                dic_target_img_dir[index] = {'class_id': class_id, 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
+                print("ERRROR")
+                print(id)
+                print(path)
         
     df = pd.DataFrame.from_dict(dic_target_img_dir, orient='index')
     fp = os.path.join(args.dataset_root_path, f"{split}.csv")
@@ -198,12 +215,13 @@ def main():
     if not os.path.exists(file_path):
         print("Generate test")
         generate_csv(args, split='test') 
-        
+            
     file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
     if not os.path.exists(file_path):
-        print("Generate val")
-        generate_csv(args, split='val')
-    
+        if(args.dataset_name!="finediving"):
+            print("Generate val")
+            generate_csv(args, split='val')
+        
     # dataset_obj = FineDiving_csv(args.dataset_root_path, 'test')
     # print(len(dataset_obj))
     # dic_target_img_dir = {}

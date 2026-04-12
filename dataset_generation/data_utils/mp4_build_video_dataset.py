@@ -57,12 +57,6 @@ class Mp4DatasetVideoTarget(data.Dataset):
         
         self.data = fixed_data
         
-        # print(data)
-        # print(type(data))
-        # print(fixed_data)
-        # print(type(fixed_data[0][0]))
-        # print(fixed_data[0][0])
-        
     def __len__(self):
         return len(self.data)
     
@@ -71,8 +65,6 @@ class Mp4DatasetVideoTarget(data.Dataset):
         starting_temporal_index = self.start_frame[index]
         ending_temporal_index = self.end_frame[index]
         
-        # print(type(starting_temporal_index))
-        # print(starting_temporal_index)
         
         decord.bridge.set_bridge("torch")
 
@@ -106,7 +98,6 @@ def vis_dataset(args):
     print("YEEEE-------")
     for split, loader in zip(['test'], [test_set]):
         for idx, (images, _) in enumerate(loader):
-            batch_size, frames, channels, height, width = images.shape
             images = einops.rearrange(images,"b f c h w -> (b f) c h w")
             
             fp = os.path.join(result_dir, split, f'{idx}.png')
@@ -137,10 +128,10 @@ def main():
     args = parser.parse_args()
     
 
-    # file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
-    # if not os.path.exists(file_path):
-    #     print("Generate train")
-    #     generate_csv(args, split='train')
+    file_path = Path(os.path.join(args.dataset_root_path, "train.csv"))
+    if not os.path.exists(file_path):
+        print("Generate train")
+        generate_csv(args, split='train')
         
     file_path = Path(os.path.join(args.dataset_root_path, "test.csv"))
     if not os.path.exists(file_path):
@@ -151,17 +142,10 @@ def main():
     result_dir = r"dataset_generation\\tester_images"
     test_set = Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform)
     print(next(iter(DataLoader(test_set))))
-    # test_set = DataLoader(Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
-        
-    # file_path = Path(os.path.join(args.dataset_root_path, "val.csv"))
-    # if not os.path.exists(file_path):
-    #     print("Generate val")
-    #     generate_csv(args, split='val')
-        
     if(args.visualize):
         vis_dataset(args)
-    # else:
-    #     print("Not visualized")
+    else:
+        print("Not visualized")
             
     
     

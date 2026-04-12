@@ -682,7 +682,8 @@ def setup_env(args, print_model=False):
     else:
         criterion = torch.nn.CrossEntropyLoss()
 
-    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+    # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9)
+    optimizer = optim.AdamW(model.parameters(), lr=args.lr)
 
     return train_loader, test_loader, model, criterion, optimizer
 

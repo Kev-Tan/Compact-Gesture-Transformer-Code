@@ -164,9 +164,6 @@ def main():
         vis_dataset(args)
     else:
         print("Not visualized")
-            
-    
-    
 
 
 if __name__ == '__main__':
