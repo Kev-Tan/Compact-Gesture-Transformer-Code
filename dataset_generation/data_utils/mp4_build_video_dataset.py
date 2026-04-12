@@ -18,7 +18,6 @@ import torch
 import torch.utils.data as data
 from numpy.random import randint
 from PIL import Image
-from pytorchvideo.transforms import UniformTemporalSubsample
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Dataset
 from torchvision import get_image_backend
@@ -30,7 +29,6 @@ import decord
 
 from .generate_csv import generate_csv
 from .transformation_function.build_video_transform import standard_transform
-from .transformation_function.temporal_transform import sampling
 from .transformation_function.custom_temporal_transform import centralized_temporal_subsample, random_temporal_subsample, stride_temporal_subsample
 class Mp4DatasetVideoTarget(data.Dataset):
     def __init__(self, args, root, split, transform = None):  
@@ -75,6 +73,14 @@ class Mp4DatasetVideoTarget(data.Dataset):
         clip = einops.rearrange(frames,"f h w c -> c f h w")
         clip = clip.float()/255.0
         
+        if(self.args.centralized_temporal_subsample):
+            clip = centralized_temporal_subsample(clip, self.n_frames)
+        if(self.args.random_temporal_subsample):
+            clip = random_temporal_subsample(clip, self.n_frames)
+        if(self.args.stride_temporal_subsample):
+            clip = stride_temporal_subsample(clip, 2,  self.n_frames)
+        
+        
         if(self.train_transform and (self.split=="train" or self.split=="val")):
             clip = self.train_transform(clip)
         else:
@@ -92,22 +98,23 @@ def vis_dataset(args):
 
     transform = standard_transform(args)
     result_dir = r"dataset_generation\\tester_images"
-    # train_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
+    train_set = DataLoader(Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='train', transform=transform), batch_size=1)
     # val_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='val', transform=transform), batch_size=1)
     test_set = DataLoader(Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
     print("YEEEE-------")
-    for split, loader in zip(['test'], [test_set]):
+    for split, loader in zip(['train','test'], [train_set,test_set]):
         for idx, (images, _) in enumerate(loader):
             images = einops.rearrange(images,"b f c h w -> (b f) c h w")
             
             fp = os.path.join(result_dir, split, f'{idx}.png')
+            print(f"----{fp}")
             save_image(images, fp, nrow=int(math.sqrt(images.shape[0])))
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--dataset_root_path', type=str, required = True, help="path to dataset root")
     parser.add_argument('--dataset_name', type=str, required = True, help = "name of the dataset")
     parser.add_argument('--visualize', action="store_true")
-    parser.add_argument('--uniform_temporal_subsample',type=int, default=None, metavar='N',help='Apply uniform temporal subsampling with N frames' )
+    parser.add_argument('--uniform_temporal_subsample', action="store_true")  
     parser.add_argument('--n_frames',type=int, default=None, metavar='N',help='number of frames per batch' )
     parser.add_argument('--centralized_temporal_subsample', action="store_true")  
     parser.add_argument('--random_temporal_subsample', action="store_true")  
@@ -122,7 +129,7 @@ def main():
     parser.add_argument('--elastic_transformation', action="store_true")
     parser.add_argument('--random_perspective', action="store_true")
     parser.add_argument('--random_erasing', action="store_true")
-    parser.add_argument('--image_size',type=int, default=None, metavar='N',help='Convert the image to a defined image sized' )
+    parser.add_argument('--image_size',type=int, default=224, metavar='N',help='Convert the image to a defined image sized' )
 
     
     args = parser.parse_args()
@@ -138,17 +145,14 @@ def main():
         print("Generate test")
         generate_csv(args, split='test') 
         
-    transform = standard_transform(args)
-    result_dir = r"dataset_generation\\tester_images"
-    test_set = Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform)
-    print(next(iter(DataLoader(test_set))))
+    # transform = standard_transform(args)
+    # result_dir = r"dataset_generation\\tester_images"
+    # test_set = Mp4DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform)
+    # print(next(iter(DataLoader(test_set))))
     if(args.visualize):
         vis_dataset(args)
     else:
         print("Not visualized")
-            
-    
-    
 
 
 if __name__ == '__main__':

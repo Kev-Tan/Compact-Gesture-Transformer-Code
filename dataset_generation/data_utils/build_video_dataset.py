@@ -18,7 +18,6 @@ import torch
 import torch.utils.data as data
 from numpy.random import randint
 from PIL import Image
-from pytorchvideo.transforms import UniformTemporalSubsample
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Dataset
 from torchvision import get_image_backend
@@ -29,7 +28,6 @@ from torchvision.utils import save_image
 
 from .generate_csv import generate_csv
 from .transformation_function.build_video_transform import standard_transform
-from .transformation_function.temporal_transform import sampling
 from .transformation_function.custom_temporal_transform import centralized_temporal_subsample, random_temporal_subsample, stride_temporal_subsample
 
 class DatasetVideoTarget(data.Dataset):
@@ -114,7 +112,6 @@ def vis_dataset(args):
     test_set = DataLoader(DatasetVideoTarget(args = args, root=args.dataset_root_path, split='test', transform=transform), batch_size=1)
     for split, loader in zip(['train', 'val', 'test'], [train_set, val_set, test_set]):
         for idx, (images, _) in enumerate(loader):
-            batch_size, frames, channels, height, width = images.shape
             images = einops.rearrange(images,"b f c h w -> (b f) c h w")
             
             fp = os.path.join(result_dir, split, f'{idx}.png')
@@ -139,7 +136,7 @@ def main():
     parser.add_argument('--elastic_transformation', action="store_true")
     parser.add_argument('--random_perspective', action="store_true")
     parser.add_argument('--random_erasing', action="store_true")
-    parser.add_argument('--image_size',type=int, default=None, metavar='N',help='Convert the image to a defined image sized' )
+    parser.add_argument('--image_size',type=int, default=224, metavar='N',help='Convert the image to a defined image sized' )
 
     
     args = parser.parse_args()

@@ -221,23 +221,6 @@ def main():
         if(args.dataset_name!="finediving"):
             print("Generate val")
             generate_csv(args, split='val')
-        
-    # dataset_obj = FineDiving_csv(args.dataset_root_path, 'test')
-    # print(len(dataset_obj))
-    # dic_target_img_dir = {}
-    # for index, (id, path, start_frame, end_frame) in enumerate(DataLoader(dataset_obj)):
-    #     try:
-    #         dic_target_img_dir[index] = {'class_id': id.item(), 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
-    #     except:
-    #         class_id = int(id[0])
-    #         dic_target_img_dir[index] = {'class_id': class_id, 'dir': path, 'start_frame': int(start_frame), 'end_frame': int(end_frame)}
-            # print("ERRROR")
-            # print(id)
-            # print(path)
-            
-        # df = pd.DataFrame.from_dict(dic_target_img_dir, orient='index')
-        # fp = os.path.join(args.dataset_root_path, f"test.csv")
-        # df.to_csv(fp, header = True, index= False)
 
 if __name__ == "__main__":
     main()

@@ -12,7 +12,7 @@ def standard_transform(args):
     print(args)
     
     if args.uniform_temporal_subsample:
-        transform_list.append(UniformTemporalSubsample(args.uniform_temporal_subsample))
+        transform_list.append(UniformTemporalSubsample(args.n_frames))
         
     
     transform_list.append(KorniaVideoTransform(args))
@@ -21,14 +21,13 @@ def standard_transform(args):
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
     test_transform = Compose([
-    UniformTemporalSubsample(args.uniform_temporal_subsample),
+    UniformTemporalSubsample(args.n_frames),
     transforms.Resize(256),
     transforms.CenterCrop(args.image_size),
     # transforms.Normalize(mean, std),
 ])
     
     return train_transform, test_transform
-    # return train_transform
 
 def main():
     parser = argparse.ArgumentParser()

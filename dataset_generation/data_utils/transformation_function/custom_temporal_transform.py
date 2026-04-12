@@ -10,6 +10,9 @@ def centralized_temporal_subsample(video, max_frames):
     print(video.shape)
     c, f, h, w = video.shape
     
+    if max_frames >= f:
+        return video
+    
     center_of_list = math.floor(f/2)
     crop_limit = math.floor(max_frames / 2)
     start = center_of_list - crop_limit
@@ -32,6 +35,11 @@ def random_temporal_subsample(video, max_frames):
     
 def stride_temporal_subsample(video, stride = 2, max_frames = None):
     video = video[:, ::stride, :, :]
+    c, f, h, w = video.shape
+    
+    if max_frames >= f:
+        return video
+    
     if max_frames is not None:
         video = video[:, :max_frames, :, :]
     return video
